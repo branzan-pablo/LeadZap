@@ -1,21 +1,29 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from "next/server"
 
-/**
- * Stores push subscription for the authenticated user (Phase 2+).
- */
-export async function POST() {
+import { upsertPushSubscription } from "@/lib/push/subscribe"
+import { createClient } from "@/lib/supabase/server"
+
+export async function POST(request: Request) {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // const body = await request.json()
-  // await savePushSubscription(user.id, body)
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
 
-  return NextResponse.json({ ok: true, message: 'Not implemented' }, { status: 501 })
+  const result = await upsertPushSubscription(supabase, user.id, body)
+  if (!result.ok) {
+    return NextResponse.json({ error: result.message }, { status: result.status })
+  }
+
+  return NextResponse.json({ ok: true })
 }

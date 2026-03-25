@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useRealtimeLeads } from "@/lib/hooks/use-realtime-leads"
 import { useRealtimeUnreadWhatsApp } from "@/lib/hooks/use-realtime-unread-whatsapp"
@@ -44,6 +45,8 @@ export type LeadsWorkspaceProps = {
   stages: PipelineStageView[]
   tags: TagView[]
   members: OrgMemberView[]
+  /** Abre o drawer deste lead (ex.: push notification /leads?leadId=). */
+  initialOpenLeadId?: string | null
 }
 
 export function LeadsWorkspace({
@@ -53,7 +56,10 @@ export function LeadsWorkspace({
   stages,
   tags,
   members,
+  initialOpenLeadId = null,
 }: LeadsWorkspaceProps) {
+  const router = useRouter()
+  const deepLinkHandled = useRef(false)
   const [leads, setLeads] = useState(initialLeads)
   const [filters, setFilters] = useState<PipelineFilterState>({
     tagIds: [],
@@ -68,6 +74,17 @@ export function LeadsWorkspace({
   useEffect(() => {
     setLeads(initialLeads)
   }, [initialLeads])
+
+  useEffect(() => {
+    if (!initialOpenLeadId || deepLinkHandled.current) return
+    const found = leads.find((l) => l.id === initialOpenLeadId)
+    if (found) {
+      setSelected(found)
+      setDrawerOpen(true)
+    }
+    deepLinkHandled.current = true
+    router.replace("/leads", { scroll: false })
+  }, [initialOpenLeadId, leads, router])
 
   useRealtimeLeads(organizationId, setLeads)
 

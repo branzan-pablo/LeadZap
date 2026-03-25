@@ -8,7 +8,7 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'LeadZap', body: '', url: '/' }
+  let data = { title: 'LeadZap', body: '', url: '/', tag: undefined }
   try {
     if (event.data) {
       const parsed = event.data.json()
@@ -20,6 +20,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
+      icon: '/icons/icon-192.png',
       data: { url: data.url },
       tag: data.tag,
     })
@@ -28,7 +29,11 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification.data?.url ?? '/'
+  const raw = event.notification.data?.url ?? '/'
+  const url =
+    typeof raw === 'string' && raw.startsWith('http')
+      ? raw
+      : new URL(raw, self.location.origin).href
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {

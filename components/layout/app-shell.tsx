@@ -11,6 +11,7 @@ import { Header } from "./header"
 import { Sidebar } from "./sidebar"
 
 export type AppShellProps = {
+  userId: string
   email: string
   fullName: string
   avatarUrl: string | null
@@ -20,6 +21,7 @@ export type AppShellProps = {
 }
 
 export function AppShell({
+  userId,
   email,
   fullName,
   avatarUrl,
@@ -51,6 +53,7 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Header
+          userId={userId}
           email={email}
           fullName={fullName}
           avatarUrl={avatarUrl}

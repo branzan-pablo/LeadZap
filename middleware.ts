@@ -13,6 +13,9 @@ export async function middleware(request: NextRequest) {
   if (pathname === '/api/push/send') {
     return supabaseResponse
   }
+  if (pathname.startsWith('/api/cron')) {
+    return supabaseResponse
+  }
 
   // Public routes that don't need auth checks beyond token refresh
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup')

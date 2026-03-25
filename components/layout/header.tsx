@@ -20,6 +20,7 @@ import { NotificationBell } from "./notification-bell"
 import { WhatsAppStatus } from "./whatsapp-status"
 
 export type HeaderProps = {
+  userId: string | null
   email: string
   fullName: string
   avatarUrl: string | null
@@ -37,6 +38,7 @@ function initials(name: string): string {
 }
 
 export function Header({
+  userId,
   email,
   fullName,
   avatarUrl,
@@ -81,7 +83,7 @@ export function Header({
 
       <div className="flex flex-1" />
 
-      <NotificationBell />
+      <NotificationBell userId={userId} />
 
       <DropdownMenu>
         <DropdownMenuTrigger

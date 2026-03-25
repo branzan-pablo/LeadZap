@@ -9,7 +9,6 @@ import {
   deleteLead,
   updateLead,
 } from "@/app/(app)/pipeline/actions"
-import { createReminder } from "@/app/(app)/reminders/actions"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -38,6 +37,8 @@ import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { LeadSource, LeadView, OrgMemberView } from "@/types/lead"
 import type { PipelineStageView } from "@/types/pipeline"
+
+import { ReminderForm } from "@/components/reminders/reminder-form"
 
 import { LeadMessages } from "./lead-messages"
 import { LeadNotes } from "./lead-notes"
@@ -86,8 +87,6 @@ export function LeadDrawer({
 }: LeadDrawerProps) {
   const router = useRouter()
   const [reminderOpen, setReminderOpen] = useState(false)
-  const [reminderTitle, setReminderTitle] = useState("")
-  const [reminderDue, setReminderDue] = useState("")
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
@@ -104,26 +103,6 @@ export function LeadDrawer({
       }
       onLeadUpdated({ ...lead, ...payload } as LeadView)
       router.refresh()
-    })
-  }
-
-  const submitReminder = () => {
-    const title = reminderTitle.trim()
-    if (!title || !reminderDue) return
-    startTransition(async () => {
-      const res = await createReminder({
-        leadId: lead.id,
-        title,
-        dueAt: new Date(reminderDue).toISOString(),
-      })
-      if (!res.ok) {
-        toast.error(res.message)
-        return
-      }
-      toast.success("Lembrete criado")
-      setReminderOpen(false)
-      setReminderTitle("")
-      setReminderDue("")
     })
   }
 
@@ -403,41 +382,13 @@ export function LeadDrawer({
           <DialogHeader>
             <DialogTitle>Novo lembrete</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="rm-title">Título</Label>
-              <Input
-                id="rm-title"
-                value={reminderTitle}
-                onChange={(e) => setReminderTitle(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="rm-due">Vencimento</Label>
-              <Input
-                id="rm-due"
-                type="datetime-local"
-                value={reminderDue}
-                onChange={(e) => setReminderDue(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setReminderOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              disabled={pending || !reminderTitle.trim() || !reminderDue}
-              onClick={submitReminder}
-            >
-              Salvar
-            </Button>
-          </DialogFooter>
+          <ReminderForm
+            leadId={lead.id}
+            onSuccess={() => {
+              setReminderOpen(false)
+              router.refresh()
+            }}
+          />
         </DialogContent>
       </Dialog>
 
