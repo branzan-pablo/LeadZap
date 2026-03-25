@@ -1,0 +1,27 @@
+---
+description: LeadZap — regras base, arquitetura e ritmo por fase (sempre aplicar)
+alwaysApply: true
+---
+
+# LeadZap — contexto fixo
+
+Em caso de dúvida ou conflito, os textos completos vencem: **`docs/instructions-initials.md`**, **`docs/ARCHITECTURE.md`**, **`docs/DESIGN-GUIDELINES.md`**.
+
+## Inegociáveis (resumo)
+
+1. Não inventar funcionalidades fora da documentação do projeto.
+2. Só **App Router** (`app/`), nunca `pages/`.
+3. TypeScript **strict**, sem `any`.
+4. Não instalar bibliotecas não especificadas sem alinhar antes.
+5. **Server Components** por padrão; `"use client"` só quando precisar de estado, eventos ou APIs de browser.
+6. **Server Actions** para mutações; **API Routes** só para webhooks e endpoints externos.
+7. **Zod** em toda entrada (forms e server actions).
+8. **RLS** no Supabase é obrigatório — não confiar só na validação no client.
+9. Pastas e arquivos conforme **`docs/ARCHITECTURE.md`**.
+10. UI com **shadcn** conforme **`docs/DESIGN-GUIDELINES.md`**.
+
+## Trabalho por fase
+
+- Uma fase por sessão (ou subconjunto explícito): tarefas na ordem de **`docs/PROMPTS-IMPLEMENTACAO.md`** (seção PROMPT N).
+- Ao concluir a fase, registrar em **`docs/fases/fase-NN.md`** (ver `docs/fases/README.md`).
+- Next.js deste repo pode divergir do treinamento: **`AGENTS.md`** (aviso de versão).
