@@ -1,12 +1,19 @@
 export type LeadSource =
-  | 'manual'
-  | 'whatsapp'
-  | 'instagram'
-  | 'website'
-  | 'referral'
-  | 'other'
+  | "manual"
+  | "whatsapp"
+  | "instagram"
+  | "website"
+  | "referral"
+  | "other"
 
-export type Lead = {
+export type TagView = {
+  id: string
+  name: string
+  color: string
+}
+
+/** Lead row as used in pipeline / list UI (matches DB + joined tags). */
+export type LeadView = {
   id: string
   organization_id: string
   assigned_to: string | null
@@ -14,10 +21,26 @@ export type Lead = {
   name: string
   phone: string
   email: string | null
-  value: number | null
+  company: string | null
   source: LeadSource
+  estimated_value: number | null
+  notes: string | null
+  position: number
+  last_interaction_at: string | null
   created_at: string
   updated_at: string
-  last_interaction_at: string | null
-  deleted_at: string | null
+  tags: TagView[]
+}
+
+export type OrgMemberView = {
+  id: string
+  full_name: string
+  email: string
+}
+
+export type LeadNoteView = {
+  id: string
+  text: string
+  created_at: string
+  author_name: string | null
 }

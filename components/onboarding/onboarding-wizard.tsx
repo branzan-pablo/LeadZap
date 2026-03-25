@@ -11,9 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
+import { createLead } from "@/app/(app)/pipeline/actions"
 import {
   completeOnboarding,
-  createLeadPlaceholder,
   createOrganization,
 } from "@/app/(app)/onboarding/actions"
 
@@ -67,9 +67,10 @@ export function OnboardingWizard({ initialStep }: OnboardingWizardProps) {
   function handleCreateLead() {
     setFormError(null)
     startTransition(async () => {
-      const result = await createLeadPlaceholder({
+      const result = await createLead({
         name: leadName,
         phone: leadPhone,
+        source: "manual",
       })
       if (!result.ok) {
         setFormError(result.message)
