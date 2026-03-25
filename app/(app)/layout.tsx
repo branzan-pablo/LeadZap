@@ -1,13 +1,42 @@
-// TODO: Implement app layout (Phase 3)
-export default function AppLayout({
+import { redirect } from "next/navigation"
+
+import { AppShell } from "@/components/layout/app-shell"
+import { createClient } from "@/lib/supabase/server"
+
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect("/login")
+  }
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select(
+      "full_name, email, avatar_url, role, organization_id, onboarding_completed"
+    )
+    .eq("id", user.id)
+    .single()
+
+  const role = profile?.role === "admin" ? "admin" : "user"
+  const fullName = profile?.full_name ?? user.email ?? "Usuário"
+  const email = profile?.email ?? user.email ?? ""
+
   return (
-    <div className="flex min-h-screen">
-      {/* TODO: Sidebar component */}
-      <main className="flex-1">{children}</main>
-    </div>
+    <AppShell
+      email={email}
+      fullName={fullName}
+      avatarUrl={profile?.avatar_url ?? null}
+      role={role}
+    >
+      {children}
+    </AppShell>
   )
 }

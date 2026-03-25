@@ -1,11 +1,29 @@
-// TODO: Implement onboarding wizard (Phase 3)
-export default function OnboardingPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-[480px] px-6">
-        <h1 className="text-xl font-semibold text-zinc-900">Bem-vindo ao LeadZap</h1>
-        <p className="text-sm text-zinc-600">Onboarding será implementado na Fase 3.</p>
-      </div>
-    </div>
-  )
+import { redirect } from "next/navigation"
+
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard"
+import { createClient } from "@/lib/supabase/server"
+
+export default async function OnboardingPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect("/login")
+  }
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("organization_id, onboarding_completed")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.onboarding_completed) {
+    redirect("/pipeline")
+  }
+
+  const initialStep: 1 | 2 | 3 = profile?.organization_id ? 2 : 1
+
+  return <OnboardingWizard initialStep={initialStep} />
 }
