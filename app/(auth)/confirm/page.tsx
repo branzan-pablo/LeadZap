@@ -1,9 +1,21 @@
-// TODO: Implement email confirmation (Phase 2)
+import { Suspense } from "react"
+import { Loader2Icon } from "lucide-react"
+
+import { ConfirmEmailClient } from "@/components/auth/confirm-email-client"
+
+function ConfirmFallback() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-8">
+      <Loader2Icon className="size-8 animate-spin text-zinc-400" aria-hidden />
+      <p className="text-sm text-zinc-600">Carregando…</p>
+    </div>
+  )
+}
+
 export default function ConfirmPage() {
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-zinc-900">Confirmação de Email</h2>
-      <p className="text-sm text-zinc-600">Confirmação será implementada na Fase 2.</p>
-    </div>
+    <Suspense fallback={<ConfirmFallback />}>
+      <ConfirmEmailClient />
+    </Suspense>
   )
 }

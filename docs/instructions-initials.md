@@ -28,3 +28,8 @@ Quando terminar uma tarefa, liste:
 - O que foi implementado
 - O que falta para completar a fase
 - Qualquer decisão que você tomou que não estava explícita na documentação
+
+Crie uma pasta dedicada dentro do projeto para documentação das fases de desenvolvimento.
+A cada nova fase concluída, gere um resumo detalhado das atividades realizadas, incluindo decisões técnicas, entregas e possíveis pendências.
+
+Salve cada resumo em um arquivo separado, nomeado de forma padronizada por fase (ex: fase-01.md, fase-02.md, etc.), garantindo organização e fácil rastreabilidade do progresso do projeto.

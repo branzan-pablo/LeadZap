@@ -1,9 +1,21 @@
-// TODO: Implement reset password (Phase 2)
+import { Suspense } from "react"
+import { Loader2Icon } from "lucide-react"
+
+import { ResetPasswordForm } from "@/components/auth/reset-password-form"
+
+function ResetFallback() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-8">
+      <Loader2Icon className="size-8 animate-spin text-zinc-400" aria-hidden />
+      <p className="text-sm text-zinc-600">Carregando…</p>
+    </div>
+  )
+}
+
 export default function ResetPasswordPage() {
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-zinc-900">Redefinir Senha</h2>
-      <p className="text-sm text-zinc-600">Reset será implementado na Fase 2.</p>
-    </div>
+    <Suspense fallback={<ResetFallback />}>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }

@@ -1,9 +1,16 @@
-// TODO: Implement login page (Phase 2)
-export default function LoginPage() {
+import { LoginForm } from "@/components/auth/login-form"
+
+export default async function LoginPage({
+  searchParams,
+}: PageProps<"/login">) {
+  const sp = await searchParams
+  const confirmed = sp.confirmed === "1"
+  const sessionExpired = sp.session === "expired"
+
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-zinc-900">Entrar</h2>
-      <p className="text-sm text-zinc-600">Login será implementado na Fase 2.</p>
-    </div>
+    <LoginForm
+      emailConfirmed={confirmed}
+      sessionExpired={sessionExpired}
+    />
   )
 }
