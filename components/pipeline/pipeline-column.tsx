@@ -14,12 +14,14 @@ export type PipelineColumnProps = {
   stage: PipelineStageView
   leads: LeadView[]
   onLeadClick: (lead: LeadView) => void
+  whatsappUnreadLeadIds?: ReadonlySet<string>
 }
 
 export function PipelineColumn({
   stage,
   leads,
   onLeadClick,
+  whatsappUnreadLeadIds,
 }: PipelineColumnProps) {
   const droppableId = `stage:${stage.id}`
   const { setNodeRef, isOver } = useDroppable({
@@ -69,7 +71,12 @@ export function PipelineColumn({
             <div className="min-h-24 rounded-md border border-dashed border-zinc-200 bg-white/50" />
           ) : null}
           {leads.map((lead) => (
-            <PipelineCard key={lead.id} lead={lead} onOpen={onLeadClick} />
+            <PipelineCard
+              key={lead.id}
+              lead={lead}
+              onOpen={onLeadClick}
+              hasUnreadWhatsApp={whatsappUnreadLeadIds?.has(lead.id)}
+            />
           ))}
         </div>
       </SortableContext>

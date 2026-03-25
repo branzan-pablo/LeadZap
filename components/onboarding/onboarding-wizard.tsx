@@ -30,9 +30,13 @@ const STEP_TITLES = [
 export type OnboardingWizardProps = {
   /** 1-based step when user already has an organization */
   initialStep: 1 | 2 | 3
+  isAdmin: boolean
 }
 
-export function OnboardingWizard({ initialStep }: OnboardingWizardProps) {
+export function OnboardingWizard({
+  initialStep,
+  isAdmin,
+}: OnboardingWizardProps) {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3>(initialStep)
   const [companyName, setCompanyName] = useState("")
@@ -123,6 +127,7 @@ export function OnboardingWizard({ initialStep }: OnboardingWizardProps) {
           ) : null}
           {step === 2 ? (
             <StepWhatsApp
+              isAdmin={isAdmin}
               onSkip={() => setStep(3)}
               onContinue={() => setStep(3)}
             />

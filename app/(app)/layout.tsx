@@ -25,6 +25,9 @@ export default async function AppLayout({
     .eq("id", user.id)
     .single()
 
+  const organizationId =
+    (profile?.organization_id as string | null | undefined) ?? null
+
   const role = profile?.role === "admin" ? "admin" : "user"
   const fullName = profile?.full_name ?? user.email ?? "Usuário"
   const email = profile?.email ?? user.email ?? ""
@@ -34,6 +37,7 @@ export default async function AppLayout({
       email={email}
       fullName={fullName}
       avatarUrl={profile?.avatar_url ?? null}
+      organizationId={organizationId}
       role={role}
     >
       {children}

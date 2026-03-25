@@ -14,6 +14,7 @@ export type AppShellProps = {
   email: string
   fullName: string
   avatarUrl: string | null
+  organizationId: string | null
   role: "admin" | "user"
   children: React.ReactNode
 }
@@ -22,6 +23,7 @@ export function AppShell({
   email,
   fullName,
   avatarUrl,
+  organizationId,
   role,
   children,
 }: AppShellProps) {
@@ -52,6 +54,8 @@ export function AppShell({
           email={email}
           fullName={fullName}
           avatarUrl={avatarUrl}
+          organizationId={organizationId}
+          role={role}
           onMenuClick={() => setMobileNavOpen(true)}
         />
         <main className="flex-1 p-4 md:p-6">{children}</main>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { useRealtimeLeads } from "@/lib/hooks/use-realtime-leads"
+import { useRealtimeUnreadWhatsApp } from "@/lib/hooks/use-realtime-unread-whatsapp"
 import type { LeadView, OrgMemberView, TagView } from "@/types/lead"
 import type { PipelineStageView } from "@/types/pipeline"
 
@@ -46,6 +47,9 @@ export function PipelineWorkspace({
   }, [initialLeads])
 
   useRealtimeLeads(organizationId, setLeads)
+
+  const { unreadLeadIds, clearUnreadForLead } =
+    useRealtimeUnreadWhatsApp(organizationId)
 
   const filtered = useMemo(
     () => applyPipelineFilters(leads, filters, { isAdmin }),
@@ -92,6 +96,7 @@ export function PipelineWorkspace({
         setLeads={setLeads}
         onLeadClick={openDrawer}
         dragDisabled={dragDisabled}
+        whatsappUnreadLeadIds={unreadLeadIds}
       />
 
       {selected ? (
@@ -102,6 +107,8 @@ export function PipelineWorkspace({
             setDrawerOpen(v)
             if (!v) setSelected(null)
           }}
+          organizationId={organizationId}
+          onWhatsAppMessagesViewed={clearUnreadForLead}
           stages={stages}
           orgTags={tags}
           members={members}

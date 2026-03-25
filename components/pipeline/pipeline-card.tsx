@@ -9,7 +9,13 @@ import { formatCurrency, formatInteractionAgo, formatPhone } from "@/lib/utils/f
 import { tagBadgeClassName, tagBadgeStyle } from "@/lib/utils/tag-styles"
 import type { LeadView } from "@/types/lead"
 
-export function LeadCardBody({ lead }: { lead: LeadView }) {
+export function LeadCardBody({
+  lead,
+  hasUnreadWhatsApp,
+}: {
+  lead: LeadView
+  hasUnreadWhatsApp?: boolean
+}) {
   const primaryTag = lead.tags[0]
   const valueLabel =
     lead.estimated_value != null
@@ -19,7 +25,16 @@ export function LeadCardBody({ lead }: { lead: LeadView }) {
   return (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span className="font-semibold text-zinc-900">{lead.name}</span>
+        <span className="flex min-w-0 items-center gap-2 font-semibold text-zinc-900">
+          {hasUnreadWhatsApp ? (
+            <span
+              className="size-2 shrink-0 rounded-full bg-sky-500"
+              title="Nova mensagem no WhatsApp"
+              aria-hidden
+            />
+          ) : null}
+          <span className="truncate">{lead.name}</span>
+        </span>
         {primaryTag ? (
           <Badge
             variant="outline"
@@ -47,9 +62,14 @@ export function LeadCardBody({ lead }: { lead: LeadView }) {
 export type PipelineCardProps = {
   lead: LeadView
   onOpen: (lead: LeadView) => void
+  hasUnreadWhatsApp?: boolean
 }
 
-export function PipelineCard({ lead, onOpen }: PipelineCardProps) {
+export function PipelineCard({
+  lead,
+  onOpen,
+  hasUnreadWhatsApp,
+}: PipelineCardProps) {
   const {
     attributes,
     listeners,
@@ -77,7 +97,7 @@ export function PipelineCard({ lead, onOpen }: PipelineCardProps) {
         isDragging && "z-10 cursor-grabbing opacity-90 shadow-lg"
       )}
     >
-      <LeadCardBody lead={lead} />
+      <LeadCardBody lead={lead} hasUnreadWhatsApp={hasUnreadWhatsApp} />
     </button>
   )
 }

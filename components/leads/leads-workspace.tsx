@@ -5,6 +5,7 @@ import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { useRealtimeLeads } from "@/lib/hooks/use-realtime-leads"
+import { useRealtimeUnreadWhatsApp } from "@/lib/hooks/use-realtime-unread-whatsapp"
 import { formatCurrency, formatInteractionAgo, formatPhone } from "@/lib/utils/formatters"
 import { tagBadgeClassName, tagBadgeStyle } from "@/lib/utils/tag-styles"
 import { cn } from "@/lib/utils"
@@ -69,6 +70,9 @@ export function LeadsWorkspace({
   }, [initialLeads])
 
   useRealtimeLeads(organizationId, setLeads)
+
+  const { unreadLeadIds, clearUnreadForLead } =
+    useRealtimeUnreadWhatsApp(organizationId)
 
   const assigneeName = useMemo(() => {
     const m = new Map(members.map((x) => [x.id, x.full_name]))
@@ -237,7 +241,18 @@ export function LeadsWorkspace({
                   className="cursor-pointer"
                   onClick={() => openDrawer(lead)}
                 >
-                  <TableCell className="font-medium">{lead.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <span className="inline-flex items-center gap-2">
+                      {unreadLeadIds.has(lead.id) ? (
+                        <span
+                          className="size-2 shrink-0 rounded-full bg-sky-500"
+                          title="Nova mensagem no WhatsApp"
+                          aria-hidden
+                        />
+                      ) : null}
+                      {lead.name}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-zinc-600">
                     {formatPhone(lead.phone)}
                   </TableCell>
@@ -292,6 +307,8 @@ export function LeadsWorkspace({
             setDrawerOpen(v)
             if (!v) setSelected(null)
           }}
+          organizationId={organizationId}
+          onWhatsAppMessagesViewed={clearUnreadForLead}
           stages={stages}
           orgTags={tags}
           members={members}

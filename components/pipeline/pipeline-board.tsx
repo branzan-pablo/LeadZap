@@ -30,6 +30,7 @@ export type PipelineBoardProps = {
   onLeadClick: (lead: LeadView) => void
   /** Drag-and-drop off while filters are active (positions must match full server ordering). */
   dragDisabled?: boolean
+  whatsappUnreadLeadIds?: ReadonlySet<string>
 }
 
 function groupByStage(
@@ -71,6 +72,7 @@ export function PipelineBoard({
   setLeads,
   onLeadClick,
   dragDisabled = false,
+  whatsappUnreadLeadIds,
 }: PipelineBoardProps) {
   const [active, setActive] = useState<LeadView | null>(null)
 
@@ -191,6 +193,7 @@ export function PipelineBoard({
           stage={stage}
           leads={grouped[stage.id] ?? []}
           onLeadClick={onLeadClick}
+          whatsappUnreadLeadIds={whatsappUnreadLeadIds}
         />
       ))}
     </div>
@@ -202,6 +205,7 @@ export function PipelineBoard({
           stage={stage}
           leads={grouped[stage.id] ?? []}
           onLeadClick={onLeadClick}
+          whatsappUnreadLeadIds={whatsappUnreadLeadIds}
         />
       ))}
     </div>

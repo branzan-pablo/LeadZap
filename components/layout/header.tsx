@@ -23,6 +23,8 @@ export type HeaderProps = {
   email: string
   fullName: string
   avatarUrl: string | null
+  organizationId: string | null
+  role: "admin" | "user"
   onMenuClick: () => void
   className?: string
 }
@@ -38,6 +40,8 @@ export function Header({
   email,
   fullName,
   avatarUrl,
+  organizationId,
+  role,
   onMenuClick,
   className,
 }: HeaderProps) {
@@ -69,7 +73,11 @@ export function Header({
         <Menu className="size-5" />
       </Button>
 
-      <WhatsAppStatus className="hidden sm:flex" />
+      <WhatsAppStatus
+        organizationId={organizationId}
+        role={role}
+        className="hidden sm:flex"
+      />
 
       <div className="flex flex-1" />
 

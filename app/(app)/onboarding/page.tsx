@@ -15,7 +15,7 @@ export default async function OnboardingPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("organization_id, onboarding_completed")
+    .select("organization_id, onboarding_completed, role")
     .eq("id", user.id)
     .single()
 
@@ -25,5 +25,7 @@ export default async function OnboardingPage() {
 
   const initialStep: 1 | 2 | 3 = profile?.organization_id ? 2 : 1
 
-  return <OnboardingWizard initialStep={initialStep} />
+  const isAdmin = profile?.role === "admin"
+
+  return <OnboardingWizard initialStep={initialStep} isAdmin={isAdmin} />
 }

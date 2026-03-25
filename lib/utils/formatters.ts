@@ -22,6 +22,11 @@ export function formatDate(value: Date | string, pattern = 'dd/MM/yyyy') {
   return format(date, pattern, { locale: ptBR })
 }
 
+/** Data e hora curtas para balões de chat (WhatsApp). */
+export function formatMessageTimestamp(iso: string) {
+  return format(new Date(iso), "dd/MM/yyyy HH:mm", { locale: ptBR })
+}
+
 export function formatRelativeTime(value: Date | string) {
   const date = typeof value === 'string' ? new Date(value) : value
   return formatDistanceToNow(date, { addSuffix: true, locale: ptBR })

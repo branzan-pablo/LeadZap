@@ -39,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { LeadSource, LeadView, OrgMemberView } from "@/types/lead"
 import type { PipelineStageView } from "@/types/pipeline"
 
+import { LeadMessages } from "./lead-messages"
 import { LeadNotes } from "./lead-notes"
 import { LeadTags } from "./lead-tags"
 
@@ -59,6 +60,9 @@ export type LeadDrawerProps = {
   lead: LeadView | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  organizationId: string
+  /** Ao abrir a aba Mensagens, remove o indicador de nova mensagem no card. */
+  onWhatsAppMessagesViewed?: (leadId: string) => void
   stages: PipelineStageView[]
   orgTags: import("@/types/lead").TagView[]
   members: OrgMemberView[]
@@ -71,6 +75,8 @@ export function LeadDrawer({
   lead,
   open,
   onOpenChange,
+  organizationId,
+  onWhatsAppMessagesViewed,
   stages,
   orgTags,
   members,
@@ -155,7 +161,13 @@ export function LeadDrawer({
             </div>
           </SheetHeader>
 
-          <Tabs defaultValue="dados" className="flex flex-1 flex-col min-h-0">
+          <Tabs
+            defaultValue="dados"
+            className="flex flex-1 flex-col min-h-0"
+            onValueChange={(v) => {
+              if (v === "mensagens") onWhatsAppMessagesViewed?.(lead.id)
+            }}
+          >
             <TabsList variant="line" className="mx-4 mt-2 w-auto shrink-0">
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="mensagens">Mensagens</TabsTrigger>
@@ -359,9 +371,10 @@ export function LeadDrawer({
               value="mensagens"
               className="flex-1 overflow-y-auto px-4 pb-6"
             >
-              <p className="mt-4 text-sm text-zinc-600">
-                Mensagens do WhatsApp aparecerão aqui após conectar.
-              </p>
+              <LeadMessages
+                leadId={lead.id}
+                organizationId={organizationId}
+              />
             </TabsContent>
 
             <TabsContent

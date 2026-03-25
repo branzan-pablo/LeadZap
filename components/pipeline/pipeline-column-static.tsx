@@ -10,12 +10,14 @@ export type PipelineColumnStaticProps = {
   stage: PipelineStageView
   leads: LeadView[]
   onLeadClick: (lead: LeadView) => void
+  whatsappUnreadLeadIds?: ReadonlySet<string>
 }
 
 export function PipelineColumnStatic({
   stage,
   leads,
   onLeadClick,
+  whatsappUnreadLeadIds,
 }: PipelineColumnStaticProps) {
   const sum = leads.reduce(
     (acc, l) => acc + (l.estimated_value ?? 0),
@@ -56,7 +58,10 @@ export function PipelineColumnStatic({
             onClick={() => onLeadClick(lead)}
             className="flex w-full flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-left shadow-sm transition-colors hover:border-zinc-300"
           >
-            <LeadCardBody lead={lead} />
+            <LeadCardBody
+              lead={lead}
+              hasUnreadWhatsApp={whatsappUnreadLeadIds?.has(lead.id)}
+            />
           </button>
         ))}
       </div>
