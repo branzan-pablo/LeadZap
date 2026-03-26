@@ -105,7 +105,7 @@ export function LeadDrawer({
         toast.error(res.message)
         return
       }
-      onLeadUpdated({ ...lead, ...payload } as LeadView)
+      onLeadUpdated({ ...lead, ...payload, updated_at: new Date().toISOString() } as LeadView)
       router.refresh()
     })
   }

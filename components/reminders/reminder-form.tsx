@@ -91,18 +91,20 @@ export function ReminderForm({ leadId, onSuccess, className }: ReminderFormProps
         <div className="space-y-1.5">
           <Label>Data</Label>
           <Popover open={calOpen} onOpenChange={setCalOpen}>
-            <PopoverTrigger>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start font-normal"
-                disabled={pending}
-              >
-                <CalendarIcon className="mr-2 size-4 opacity-70" />
-                {date
-                  ? format(date, "PPP", { locale: ptBR })
-                  : "Selecionar data"}
-              </Button>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start font-normal"
+                  disabled={pending}
+                />
+              }
+            >
+              <CalendarIcon className="mr-2 size-4 opacity-70" />
+              {date
+                ? format(date, "PPP", { locale: ptBR })
+                : "Selecionar data"}
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar

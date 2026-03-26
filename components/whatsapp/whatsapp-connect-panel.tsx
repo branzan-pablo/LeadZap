@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import {
   disconnectWhatsAppInstance,
+  getWhatsAppHeaderStatus,
   prepareWhatsAppConnection,
   syncWhatsAppInstanceState,
 } from "@/app/(app)/settings/whatsapp/actions"
@@ -40,27 +41,43 @@ export function WhatsAppConnectPanel({
   const refreshState = useCallback(() => {
     if (!isAdmin) return
     startTransition(async () => {
-      const r = await syncWhatsAppInstanceState()
-      if (!r.ok) return
-      setStatus(r.data.status)
-      setPhoneNumber(r.data.phone_number)
-      if (r.data.status === "connected") {
-        setQrDataUrl(null)
+      try {
+        const r = await syncWhatsAppInstanceState()
+        if (!r.ok) return
+        setStatus(r.data.status)
+        setPhoneNumber(r.data.phone_number)
+        if (r.data.status === "connected") {
+          setQrDataUrl(null)
+        }
+      } catch {
+        // Evolution API offline — ignore silently
       }
     })
   }, [isAdmin])
 
-  useEffect(() => {
-    refreshState()
-  }, [refreshState])
-
+  // Load initial status from DB (no Evolution API call)
   useEffect(() => {
     if (!isAdmin) return
+    let cancelled = false
+    getWhatsAppHeaderStatus()
+      .then((r) => {
+        if (!cancelled && r.ok) {
+          setStatus(r.data.status)
+          setPhoneNumber(r.data.phone_number)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [isAdmin])
+
+  // Only poll while waiting for QR scan (connecting state)
+  useEffect(() => {
+    if (!isAdmin || !qrDataUrl) return
     pollRef.current = setInterval(refreshState, 5000)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [isAdmin, refreshState])
+  }, [isAdmin, qrDataUrl, refreshState])
 
   function handleConnect() {
     if (!isAdmin) return

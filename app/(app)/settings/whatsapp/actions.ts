@@ -144,7 +144,7 @@ export async function prepareWhatsAppConnection(): Promise<
     }
   }
 
-  const qrDataUrl = extractQrDataUrl(
+  const qrDataUrl = await extractQrDataUrl(
     qrRaw as Parameters<typeof extractQrDataUrl>[0]
   )
   if (!qrDataUrl) {

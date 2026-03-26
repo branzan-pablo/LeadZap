@@ -125,15 +125,17 @@ export function PipelineFilters({
         </div>
 
         <Popover open={tagOpen} onOpenChange={setTagOpen}>
-          <PopoverTrigger>
-            <Button variant="outline" type="button" className="min-w-[140px]">
-              Tags
-              {value.tagIds.length > 0 ? (
-                <Badge variant="secondary" className="ml-1">
-                  {value.tagIds.length}
-                </Badge>
-              ) : null}
-            </Button>
+          <PopoverTrigger
+            render={
+              <Button variant="outline" type="button" className="min-w-[140px]" />
+            }
+          >
+            Tags
+            {value.tagIds.length > 0 ? (
+              <Badge variant="secondary" className="ml-1">
+                {value.tagIds.length}
+              </Badge>
+            ) : null}
           </PopoverTrigger>
           <PopoverContent className="w-72 p-0" align="start">
             <Command>

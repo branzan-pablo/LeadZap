@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export default async function OnboardingPage() {
   const supabase = await createClient()
@@ -13,7 +14,8 @@ export default async function OnboardingPage() {
     redirect("/login")
   }
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from("users")
     .select("organization_id, onboarding_completed, role")
     .eq("id", user.id)

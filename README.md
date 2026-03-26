@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LeadZap
 
-## Getting Started
+CRM com pipeline visual e integração WhatsApp via Evolution API.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 20+
+- pnpm
+- Docker (para Evolution API local)
+- Conta no [Supabase](https://supabase.com)
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Preencha as variáveis em `.env.local` (Supabase, VAPID, etc.).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Rode o schema SQL no Supabase SQL Editor (copie o conteúdo de `supabase/schema.sql`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Dev
 
-## Learn More
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Acesse `http://localhost:3000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Evolution API (WhatsApp)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+A integração WhatsApp usa a [Evolution API v2](https://doc.evolution-api.com/v2/pt/get-started/introduction). Para rodar localmente:
 
-## Deploy on Vercel
+```bash
+# Iniciar
+pnpm evolution:start
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Ver logs
+pnpm evolution:logs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Parar
+pnpm evolution:stop
+```
+
+Isso sobe um container Docker com a Evolution API em `http://localhost:8080`.
+
+Configure no `.env.local`:
+
+```env
+EVOLUTION_API_URL=http://localhost:8080
+EVOLUTION_API_KEY=429683C4C977415CAAFCCE10F7D57E11
+```
+
+A `EVOLUTION_API_KEY` do script de dev usa um valor fixo para facilitar. Em produção, gere uma chave segura e configure via variável de ambiente do container (`AUTHENTICATION_API_KEY`).
+
+### Fluxo de conexão
+
+1. O app cria uma instância na Evolution API (`POST /instance/create`)
+2. Gera QR code via `GET /instance/connect/{instance}`
+3. O usuário escaneia o QR com o WhatsApp
+4. Polling verifica o estado via `GET /instance/connectionState/{instance}`
+5. Quando `state: "open"`, a conexão está ativa
+
+### Sem Docker
+
+Se preferir instalar sem Docker, siga a [documentação oficial](https://doc.evolution-api.com/v2/pt/get-started/introduction) para instalação via NVM.
+
+## Deploy
+
+Deploy via [Vercel](https://vercel.com). Consulte a [documentação de deploy do Next.js](https://nextjs.org/docs/app/building-your-application/deploying).

@@ -141,17 +141,19 @@ export function LeadTags({
         ))}
 
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              className="size-7"
-              disabled={pending}
-              aria-label="Adicionar tag"
-            >
-              <PlusIcon className="size-4" />
-            </Button>
+          <PopoverTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="size-7"
+                disabled={pending}
+                aria-label="Adicionar tag"
+              />
+            }
+          >
+            <PlusIcon className="size-4" />
           </PopoverTrigger>
           <PopoverContent className="w-72 p-0" align="start">
             <Command>
@@ -174,15 +176,17 @@ export function LeadTags({
             </Command>
             <div className="border-t border-zinc-200 p-2">
               <Popover open={createOpen} onOpenChange={setCreateOpen}>
-                <PopoverTrigger>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="w-full"
-                  >
-                    Criar nova tag
-                  </Button>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
+                    />
+                  }
+                >
+                  Criar nova tag
                 </PopoverTrigger>
                 <PopoverContent className="w-64 space-y-3" align="start">
                   <div className="space-y-1.5">

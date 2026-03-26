@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 
 import { getWhatsAppHeaderStatus } from "@/app/(app)/settings/whatsapp/actions"
 import { cn } from "@/lib/utils"
@@ -18,19 +19,23 @@ export function WhatsAppStatus({
   role,
   className,
 }: WhatsAppStatusProps) {
+  const pathname = usePathname()
+  const isOnboarding = pathname === "/onboarding"
   const [status, setStatus] = useState<WhatsappInstanceDbStatus | null>(null)
 
   useEffect(() => {
+    if (!organizationId || isOnboarding) return
+
     let cancelled = false
 
     async function load() {
-      if (!organizationId) {
-        if (!cancelled) setStatus(null)
-        return
-      }
-      const r = await getWhatsAppHeaderStatus()
-      if (!cancelled && r.ok) {
-        setStatus(r.data.status)
+      try {
+        const r = await getWhatsAppHeaderStatus()
+        if (!cancelled && r.ok) {
+          setStatus(r.data.status)
+        }
+      } catch {
+        // Evolution API offline or server action transport error — ignore silently
       }
     }
 
@@ -41,7 +46,7 @@ export function WhatsAppStatus({
       cancelled = true
       clearInterval(interval)
     }
-  }, [organizationId])
+  }, [organizationId, isOnboarding])
 
   const connected = status === "connected"
 

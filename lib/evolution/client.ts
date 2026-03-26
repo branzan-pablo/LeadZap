@@ -1,3 +1,5 @@
+import QRCode from "qrcode"
+
 import type {
   EvolutionConnectionStateResponse,
   EvolutionCreateInstanceResponse,
@@ -100,10 +102,16 @@ export async function logoutInstance(
 }
 
 /**
- * Extrai string base64 ou data URL do JSON de `/instance/connect`.
+ * Extrai ou gera data URL do QR a partir do JSON de `/instance/connect`.
+ *
+ * Evolution API v2 retorna `{ pairingCode, code, count }` onde `code` é o
+ * conteúdo bruto do QR (não base64 de imagem). Versões anteriores retornavam
+ * `base64` ou `qrcode.base64` com a imagem pronta.
  */
-export function extractQrDataUrl(raw: EvolutionQrResponse): string | null {
+export async function extractQrDataUrl(raw: EvolutionQrResponse): Promise<string | null> {
   const r = raw as Record<string, unknown>
+
+  // v1 / algumas configs: base64 da imagem pronta
   const direct = r.base64
   if (typeof direct === "string" && direct.length > 0) {
     return direct.startsWith("data:") ? direct : `data:image/png;base64,${direct}`
@@ -116,10 +124,17 @@ export function extractQrDataUrl(raw: EvolutionQrResponse): string | null {
       return b.startsWith("data:") ? b : `data:image/png;base64,${b}`
     }
   }
+
+  // v2: `code` é o conteúdo bruto do QR — gerar imagem
   const code = r.code
   if (typeof code === "string" && code.length > 0) {
-    return code.startsWith("data:") ? code : `data:image/png;base64,${code}`
+    try {
+      return await QRCode.toDataURL(code, { width: 256, margin: 2 })
+    } catch {
+      return null
+    }
   }
+
   return null
 }
 

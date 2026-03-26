@@ -333,6 +333,7 @@ CREATE POLICY "Users can view own org" ON organizations FOR SELECT USING (id = g
 CREATE POLICY "Admins can update own org" ON organizations FOR UPDATE USING (id = get_user_org_id() AND is_admin());
 
 -- users
+CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (id = auth.uid());
 CREATE POLICY "Users can view org members" ON users FOR SELECT USING (organization_id = get_user_org_id());
 CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (id = auth.uid());
 

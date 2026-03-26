@@ -69,18 +69,19 @@ export async function createOrganization(
     return { ok: false, message: "Sessão expirada. Faça login novamente." }
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const admin = createAdminClient()
+  const { data: profile, error: profileError } = await admin
     .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single()
 
   if (profileError || !profile) {
-    return { ok: false, message: "Não foi possível carregar seu perfil." }
+    console.error("[createOrganization] profile lookup failed:", { profileError, profile, userId: user.id })
+    return { ok: false, message: profileError?.message ?? "Não foi possível carregar seu perfil." }
   }
 
   if (profile.organization_id) {
-    const admin = createAdminClient()
     const { data: org, error: orgError } = await admin
       .from("organizations")
       .select("id, name, slug")
@@ -109,7 +110,6 @@ export async function createOrganization(
     }
   }
 
-  const admin = createAdminClient()
   const baseSlug = slugify(name)
   const slug = await uniqueSlug(admin, baseSlug)
 
