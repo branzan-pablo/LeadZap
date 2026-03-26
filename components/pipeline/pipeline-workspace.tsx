@@ -2,13 +2,22 @@
 
 import { useEffect, useMemo, useState } from "react"
 
+import dynamic from "next/dynamic"
+
 import { useRealtimeLeads } from "@/lib/hooks/use-realtime-leads"
 import { useRealtimeUnreadWhatsApp } from "@/lib/hooks/use-realtime-unread-whatsapp"
 import type { LeadView, OrgMemberView, TagView } from "@/types/lead"
 import type { PipelineStageView } from "@/types/pipeline"
 
-import { LeadDrawer } from "../leads/lead-drawer"
-import { PipelineBoard } from "./pipeline-board"
+const LeadDrawer = dynamic(
+  () => import("../leads/lead-drawer").then((m) => m.LeadDrawer),
+  { ssr: false }
+)
+
+const PipelineBoard = dynamic(
+  () => import("./pipeline-board").then((m) => m.PipelineBoard),
+  { ssr: false }
+)
 import {
   applyPipelineFilters,
   filtersAreActive,
@@ -75,22 +84,28 @@ export function PipelineWorkspace({
     setSelected((s) => (s?.id === id ? null : s))
   }
 
+  const hasLeads = leads.length > 0
+
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold text-zinc-900">Pipeline</h1>
         <p className="text-sm text-zinc-600">
-          Arraste os cartões entre colunas. Clique para ver detalhes.
+          {hasLeads
+            ? "Arraste os cartões entre colunas. Clique para ver detalhes."
+            : "Seu pipeline está vazio. Crie um lead para começar."}
         </p>
       </div>
 
-      <PipelineFilters
-        tags={tags}
-        members={members}
-        isAdmin={isAdmin}
-        value={filters}
-        onChange={setFilters}
-      />
+      {hasLeads ? (
+          <PipelineFilters
+          tags={tags}
+          members={members}
+          isAdmin={isAdmin}
+          value={filters}
+          onChange={setFilters}
+        />
+      ) : null}
 
       <PipelineBoard
         stages={stages}

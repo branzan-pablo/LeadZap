@@ -5,6 +5,8 @@ import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
+import dynamic from "next/dynamic"
+
 import { useRealtimeLeads } from "@/lib/hooks/use-realtime-leads"
 import { useRealtimeUnreadWhatsApp } from "@/lib/hooks/use-realtime-unread-whatsapp"
 import { formatCurrency, formatInteractionAgo, formatPhone } from "@/lib/utils/formatters"
@@ -23,7 +25,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { LeadDrawer } from "./lead-drawer"
+const LeadDrawer = dynamic(
+  () => import("./lead-drawer").then((m) => m.LeadDrawer),
+  { ssr: false }
+)
 import {
   applyPipelineFilters,
   PipelineFilters,
@@ -250,7 +255,9 @@ export function LeadsWorkspace({
             {sorted.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="py-10 text-center text-sm text-zinc-500">
-                  Nenhum lead encontrado.
+                  {leads.length === 0
+                    ? "Nenhum lead cadastrado. Crie um lead pelo pipeline."
+                    : "Nenhum lead encontrado com esses filtros."}
                 </TableCell>
               </TableRow>
             ) : (
