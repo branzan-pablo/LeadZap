@@ -18,6 +18,7 @@ import {
 
 export type PipelineWorkspaceProps = {
   organizationId: string
+  userId: string
   isAdmin: boolean
   initialLeads: LeadView[]
   stages: PipelineStageView[]
@@ -27,6 +28,7 @@ export type PipelineWorkspaceProps = {
 
 export function PipelineWorkspace({
   organizationId,
+  userId,
   isAdmin,
   initialLeads,
   stages,
@@ -108,6 +110,7 @@ export function PipelineWorkspace({
             if (!v) setSelected(null)
           }}
           organizationId={organizationId}
+          userId={userId}
           onWhatsAppMessagesViewed={clearUnreadForLead}
           stages={stages}
           orgTags={tags}

@@ -7,6 +7,7 @@ import type { PipelineStageView } from "@/types/pipeline"
 
 export type OrgPipelineData = {
   organizationId: string
+  userId: string
   isAdmin: boolean
   stages: PipelineStageView[]
   leads: LeadView[]
@@ -123,6 +124,7 @@ export async function getOrgPipelineData(): Promise<OrgPipelineData | null> {
 
   return {
     organizationId,
+    userId: user.id,
     isAdmin,
     stages: stages as unknown as PipelineStageView[],
     leads,

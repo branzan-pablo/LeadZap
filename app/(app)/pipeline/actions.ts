@@ -22,9 +22,15 @@ type ActivityType =
   | "lead_updated"
   | "lead_moved"
   | "lead_deleted"
+  | "lead_assigned"
   | "tag_added"
   | "tag_removed"
   | "note_added"
+  | "reminder_created"
+  | "reminder_completed"
+  | "attachment_added"
+  | "attachment_removed"
+  | "message_received"
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -452,8 +458,8 @@ export async function moveLead(
     user_id: userId,
     type: "lead_moved",
     metadata: {
-      from_stage: fromMeta?.name ?? fromStageId,
-      to_stage: toMeta.name,
+      from_stage_name: fromMeta?.name ?? fromStageId,
+      to_stage_name: toMeta.name,
     },
   })
 
@@ -804,4 +810,322 @@ export async function listLeadNotes(
   })
 
   return { ok: true, data: notes }
+}
+
+// ---------------------------------------------------------------------------
+// Attachments
+// ---------------------------------------------------------------------------
+
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+const MAX_ATTACHMENTS_PER_LEAD = 5
+
+export type AttachmentView = {
+  id: string
+  file_name: string
+  file_type: string
+  file_size: number
+  storage_path: string
+  uploaded_by: string
+  created_at: string
+}
+
+export async function uploadAttachment(
+  formData: FormData
+): Promise<ActionResult<AttachmentView>> {
+  const file = formData.get("file")
+  const leadId = formData.get("leadId")
+
+  if (!(file instanceof File) || !file.name) {
+    return { ok: false, message: "Arquivo inválido." }
+  }
+
+  const leadIdParse = z.string().uuid().safeParse(leadId)
+  if (!leadIdParse.success) {
+    return { ok: false, message: "Lead inválido." }
+  }
+
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return {
+      ok: false,
+      message: "Tipo de arquivo não permitido. Use imagens (JPG, PNG, WebP) ou PDF.",
+    }
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    return { ok: false, message: "Arquivo excede o limite de 5 MB." }
+  }
+
+  const auth = await requireOrgContext()
+  if (!auth.ok) return auth
+
+  const { supabase, userId, organizationId } = auth.data.ctx
+
+  // Verify lead belongs to org
+  const { data: lead, error: leadErr } = await supabase
+    .from("leads")
+    .select("id, organization_id")
+    .eq("id", leadIdParse.data)
+    .is("deleted_at", null)
+    .maybeSingle()
+
+  if (leadErr || !lead || lead.organization_id !== organizationId) {
+    return { ok: false, message: "Lead não encontrado." }
+  }
+
+  // Check attachment count
+  const { count, error: countErr } = await supabase
+    .from("attachments")
+    .select("id", { count: "exact", head: true })
+    .eq("lead_id", leadIdParse.data)
+
+  if (countErr) {
+    return { ok: false, message: "Erro ao verificar anexos existentes." }
+  }
+
+  if ((count ?? 0) >= MAX_ATTACHMENTS_PER_LEAD) {
+    return {
+      ok: false,
+      message: `Limite de ${MAX_ATTACHMENTS_PER_LEAD} anexos por lead atingido.`,
+    }
+  }
+
+  // Sanitize file name: timestamp + original name
+  const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+  const storagePath = `org_${organizationId}/leads/${leadIdParse.data}/${safeName}`
+
+  // Upload to Supabase Storage using admin client (bypasses storage RLS for server actions)
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: false, message: "Servidor sem SUPABASE_SERVICE_ROLE_KEY." }
+  }
+
+  const admin = createAdminClient()
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  const { error: uploadErr } = await admin.storage
+    .from("attachments")
+    .upload(storagePath, buffer, {
+      contentType: file.type,
+      upsert: false,
+    })
+
+  if (uploadErr) {
+    return {
+      ok: false,
+      message: uploadErr.message ?? "Falha no upload do arquivo.",
+    }
+  }
+
+  // Create DB record
+  const { data: inserted, error: insertErr } = await admin
+    .from("attachments")
+    .insert({
+      organization_id: organizationId,
+      lead_id: leadIdParse.data,
+      uploaded_by: userId,
+      file_name: file.name,
+      file_type: file.type,
+      file_size: file.size,
+      storage_path: storagePath,
+    })
+    .select("id, file_name, file_type, file_size, storage_path, uploaded_by, created_at")
+    .single()
+
+  if (insertErr || !inserted) {
+    // Rollback storage
+    await admin.storage.from("attachments").remove([storagePath])
+    return {
+      ok: false,
+      message: insertErr?.message ?? "Falha ao registrar o anexo.",
+    }
+  }
+
+  await insertActivity({
+    organization_id: organizationId,
+    lead_id: leadIdParse.data,
+    user_id: userId,
+    type: "attachment_added",
+    metadata: { file_name: file.name },
+  })
+
+  revalidatePath("/pipeline")
+  revalidatePath("/leads")
+
+  return {
+    ok: true,
+    data: {
+      id: inserted.id as string,
+      file_name: inserted.file_name as string,
+      file_type: inserted.file_type as string,
+      file_size: inserted.file_size as number,
+      storage_path: inserted.storage_path as string,
+      uploaded_by: inserted.uploaded_by as string,
+      created_at: inserted.created_at as string,
+    },
+  }
+}
+
+const deleteAttachmentSchema = z.object({
+  attachmentId: z.string().uuid(),
+  leadId: z.string().uuid(),
+})
+
+export async function deleteAttachment(
+  raw: unknown
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = deleteAttachmentSchema.safeParse(raw)
+  if (!parsed.success) {
+    return { ok: false, message: "Dados inválidos." }
+  }
+
+  const auth = await requireOrgContext()
+  if (!auth.ok) return auth
+
+  const { supabase, userId, organizationId, role } = auth.data.ctx
+
+  const { data: att, error: attErr } = await supabase
+    .from("attachments")
+    .select("id, storage_path, uploaded_by, file_name, lead_id, organization_id")
+    .eq("id", parsed.data.attachmentId)
+    .maybeSingle()
+
+  if (attErr || !att) {
+    return { ok: false, message: "Anexo não encontrado." }
+  }
+
+  if (att.organization_id !== organizationId) {
+    return { ok: false, message: "Anexo não encontrado." }
+  }
+
+  if (att.uploaded_by !== userId && role !== "admin") {
+    return { ok: false, message: "Apenas quem fez upload ou admin pode remover." }
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: false, message: "Servidor sem SUPABASE_SERVICE_ROLE_KEY." }
+  }
+
+  const admin = createAdminClient()
+
+  // Delete from storage
+  await admin.storage.from("attachments").remove([att.storage_path as string])
+
+  // Delete DB record
+  const { error: delErr } = await admin
+    .from("attachments")
+    .delete()
+    .eq("id", parsed.data.attachmentId)
+
+  if (delErr) {
+    return { ok: false, message: delErr.message ?? "Falha ao remover o anexo." }
+  }
+
+  await insertActivity({
+    organization_id: organizationId,
+    lead_id: parsed.data.leadId,
+    user_id: userId,
+    type: "attachment_removed",
+    metadata: { file_name: att.file_name },
+  })
+
+  revalidatePath("/pipeline")
+  revalidatePath("/leads")
+
+  return { ok: true, data: { id: parsed.data.attachmentId } }
+}
+
+export async function getAttachmentSignedUrl(
+  attachmentId: string
+): Promise<ActionResult<{ url: string }>> {
+  const idParse = z.string().uuid().safeParse(attachmentId)
+  if (!idParse.success) {
+    return { ok: false, message: "ID inválido." }
+  }
+
+  const auth = await requireOrgContext()
+  if (!auth.ok) return auth
+
+  const { supabase, organizationId } = auth.data.ctx
+
+  const { data: att, error } = await supabase
+    .from("attachments")
+    .select("storage_path, organization_id")
+    .eq("id", idParse.data)
+    .maybeSingle()
+
+  if (error || !att || att.organization_id !== organizationId) {
+    return { ok: false, message: "Anexo não encontrado." }
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: false, message: "Servidor sem SUPABASE_SERVICE_ROLE_KEY." }
+  }
+
+  const admin = createAdminClient()
+  const { data: signed, error: signErr } = await admin.storage
+    .from("attachments")
+    .createSignedUrl(att.storage_path as string, 60 * 5) // 5 min expiry
+
+  if (signErr || !signed?.signedUrl) {
+    return { ok: false, message: "Não foi possível gerar URL de download." }
+  }
+
+  return { ok: true, data: { url: signed.signedUrl } }
+}
+
+export async function listAttachments(
+  leadId: string
+): Promise<ActionResult<AttachmentView[]>> {
+  const idParse = z.string().uuid().safeParse(leadId)
+  if (!idParse.success) {
+    return { ok: false, message: "Lead inválido." }
+  }
+
+  const auth = await requireOrgContext()
+  if (!auth.ok) return auth
+
+  const { supabase, organizationId } = auth.data.ctx
+
+  const { data: lead, error: leadErr } = await supabase
+    .from("leads")
+    .select("id, organization_id")
+    .eq("id", idParse.data)
+    .is("deleted_at", null)
+    .maybeSingle()
+
+  if (leadErr || !lead || lead.organization_id !== organizationId) {
+    return { ok: false, message: "Lead não encontrado." }
+  }
+
+  const { data: rows, error } = await supabase
+    .from("attachments")
+    .select("id, file_name, file_type, file_size, storage_path, uploaded_by, created_at")
+    .eq("lead_id", idParse.data)
+    .order("created_at", { ascending: false })
+
+  if (error || !rows) {
+    return {
+      ok: false,
+      message: error?.message ?? "Não foi possível carregar os anexos.",
+    }
+  }
+
+  return {
+    ok: true,
+    data: rows.map((r) => ({
+      id: r.id as string,
+      file_name: r.file_name as string,
+      file_type: r.file_type as string,
+      file_size: r.file_size as number,
+      storage_path: r.storage_path as string,
+      uploaded_by: r.uploaded_by as string,
+      created_at: r.created_at as string,
+    })),
+  }
 }

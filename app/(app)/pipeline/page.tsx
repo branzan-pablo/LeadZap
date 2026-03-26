@@ -12,6 +12,7 @@ export default async function PipelinePage() {
   return (
     <PipelineWorkspace
       organizationId={data.organizationId}
+      userId={data.userId}
       isAdmin={data.isAdmin}
       initialLeads={data.leads}
       stages={data.stages}

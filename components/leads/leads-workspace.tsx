@@ -40,6 +40,7 @@ type SortKey =
 
 export type LeadsWorkspaceProps = {
   organizationId: string
+  userId: string
   isAdmin: boolean
   initialLeads: LeadView[]
   stages: PipelineStageView[]
@@ -51,6 +52,7 @@ export type LeadsWorkspaceProps = {
 
 export function LeadsWorkspace({
   organizationId,
+  userId,
   isAdmin,
   initialLeads,
   stages,
@@ -325,6 +327,7 @@ export function LeadsWorkspace({
             if (!v) setSelected(null)
           }}
           organizationId={organizationId}
+          userId={userId}
           onWhatsAppMessagesViewed={clearUnreadForLead}
           stages={stages}
           orgTags={tags}

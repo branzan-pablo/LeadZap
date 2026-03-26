@@ -25,6 +25,7 @@ export default async function LeadsPage({
   return (
     <LeadsWorkspace
       organizationId={data.organizationId}
+      userId={data.userId}
       isAdmin={data.isAdmin}
       initialLeads={data.leads}
       stages={data.stages}

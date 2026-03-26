@@ -40,6 +40,8 @@ import type { PipelineStageView } from "@/types/pipeline"
 
 import { ReminderForm } from "@/components/reminders/reminder-form"
 
+import { LeadActivity } from "./lead-activity"
+import { LeadAttachments } from "./lead-attachments"
 import { LeadMessages } from "./lead-messages"
 import { LeadNotes } from "./lead-notes"
 import { LeadTags } from "./lead-tags"
@@ -62,6 +64,7 @@ export type LeadDrawerProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   organizationId: string
+  userId: string
   /** Ao abrir a aba Mensagens, remove o indicador de nova mensagem no card. */
   onWhatsAppMessagesViewed?: (leadId: string) => void
   stages: PipelineStageView[]
@@ -77,6 +80,7 @@ export function LeadDrawer({
   open,
   onOpenChange,
   organizationId,
+  userId,
   onWhatsAppMessagesViewed,
   stages,
   orgTags,
@@ -276,9 +280,11 @@ export function LeadDrawer({
 
                 <div className="space-y-1.5 border-t border-zinc-100 pt-4">
                   <Label>Anexos</Label>
-                  <p className="text-sm text-zinc-500">
-                    Upload de anexos virá na Fase 7.
-                  </p>
+                  <LeadAttachments
+                    leadId={lead.id}
+                    userId={userId}
+                    isAdmin={isAdmin}
+                  />
                 </div>
 
                 <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-4">
@@ -369,9 +375,7 @@ export function LeadDrawer({
               value="atividades"
               className="flex-1 overflow-y-auto px-4 pb-6"
             >
-              <p className="mt-4 text-sm text-zinc-600">
-                Histórico de atividades (Fase 7).
-              </p>
+              <LeadActivity leadId={lead.id} />
             </TabsContent>
           </Tabs>
         </SheetContent>
