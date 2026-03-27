@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist_Mono, Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -27,6 +28,7 @@ export default function RootLayout({
     <html lang="pt-BR" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${inter.variable} ${geistMono.variable} min-h-full font-sans antialiased`}>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   )
