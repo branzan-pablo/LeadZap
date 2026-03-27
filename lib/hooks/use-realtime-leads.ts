@@ -77,10 +77,7 @@ export function useRealtimeLeads(
   setLeads: Dispatch<SetStateAction<LeadView[]>>
 ) {
   const setRef = useRef(setLeads)
-
-  useEffect(() => {
-    setRef.current = setLeads
-  })
+  setRef.current = setLeads
 
   useEffect(() => {
     if (!organizationId) return

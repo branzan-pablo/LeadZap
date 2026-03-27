@@ -40,9 +40,7 @@ export function useRealtimeMessages(
   scrollRef: RefObject<HTMLDivElement | null>
 ) {
   const setRef = useRef(setMessages)
-  useEffect(() => {
-    setRef.current = setMessages
-  })
+  setRef.current = setMessages
 
   useEffect(() => {
     if (!leadId || !organizationId) return

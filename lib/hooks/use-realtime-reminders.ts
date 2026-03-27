@@ -12,10 +12,7 @@ export function useRealtimeReminders(
   onChange: () => void
 ) {
   const onChangeRef = useRef(onChange)
-
-  useEffect(() => {
-    onChangeRef.current = onChange
-  }, [onChange])
+  onChangeRef.current = onChange
 
   useEffect(() => {
     if (!userId) return
