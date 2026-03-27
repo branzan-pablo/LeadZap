@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto"
+
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
@@ -5,20 +7,34 @@ import { sendPushNotification } from "@/lib/push/send"
 
 const bodySchema = z.object({
   userId: z.string().uuid(),
-  title: z.string().min(1),
-  body: z.string().min(1),
-  url: z.string().optional(),
-  tag: z.string().optional(),
+  title: z.string().min(1).max(200),
+  body: z.string().min(1).max(1000),
+  url: z.string().url().optional(),
+  tag: z.string().max(100).optional(),
 })
 
+function tokenMatch(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided, "utf8")
+  const b = Buffer.from(expected, "utf8")
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
+
+const UNAUTHORIZED = NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
 /**
- * Internal/cron use. Protect with PUSH_SEND_SECRET when set.
+ * Internal/cron use. Requires PUSH_SEND_SECRET — fail-closed.
  */
 export async function POST(request: Request) {
-  const token = process.env.PUSH_SEND_SECRET
+  const secret = process.env.PUSH_SEND_SECRET
+  if (!secret) {
+    console.error("[api/push/send] PUSH_SEND_SECRET not configured — rejecting request")
+    return UNAUTHORIZED
+  }
+
   const auth = request.headers.get("authorization")
-  if (token && auth !== `Bearer ${token}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!auth || !auth.startsWith("Bearer ") || !tokenMatch(auth.slice(7), secret)) {
+    return UNAUTHORIZED
   }
 
   let raw: unknown
@@ -30,8 +46,7 @@ export async function POST(request: Request) {
 
   const parsed = bodySchema.safeParse(raw)
   if (!parsed.success) {
-    const msg = parsed.error.issues[0]?.message ?? "Invalid body"
-    return NextResponse.json({ error: msg }, { status: 400 })
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 })
   }
 
   try {
@@ -42,8 +57,8 @@ export async function POST(request: Request) {
       tag: parsed.data.tag,
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Send failed"
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error("[api/push/send] notification failed:", e)
+    return NextResponse.json({ error: "Send failed" }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })
