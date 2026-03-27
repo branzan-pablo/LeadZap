@@ -21,7 +21,6 @@ import type { PipelineStageView } from "@/types/pipeline"
 
 import { PipelineCardOverlay } from "./pipeline-card"
 import { PipelineColumn } from "./pipeline-column"
-import { PipelineColumnStatic } from "./pipeline-column-static"
 
 export type PipelineBoardProps = {
   stages: PipelineStageView[]
@@ -188,12 +187,13 @@ export function PipelineBoard({
   const columns = dragDisabled ? (
     <div className="flex gap-4 overflow-x-auto pb-4">
       {stages.map((stage) => (
-        <PipelineColumnStatic
+        <PipelineColumn
           key={stage.id}
           stage={stage}
           leads={grouped[stage.id] ?? []}
           onLeadClick={onLeadClick}
           whatsappUnreadLeadIds={whatsappUnreadLeadIds}
+          isDraggable={false}
         />
       ))}
     </div>

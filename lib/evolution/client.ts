@@ -7,6 +7,18 @@ import type {
   WhatsappInstanceDbStatus,
 } from "@/types/evolution"
 
+function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  )
+}
+
 const base = () => {
   const url = process.env.EVOLUTION_API_URL
   if (!url) throw new Error("EVOLUTION_API_URL is not set")
@@ -33,15 +45,19 @@ export async function createInstance(
   orgId: string
 ): Promise<EvolutionCreateInstanceResponse> {
   const name = instanceNameForOrg(orgId)
-  const res = await fetch(`${base()}/instance/create`, {
-    method: "POST",
-    headers: evolutionHeaders(),
-    body: JSON.stringify({
-      instanceName: name,
-      qrcode: true,
-      integration: "WHATSAPP-BAILEYS",
-    }),
-  })
+  const res = await fetchWithTimeout(
+    `${base()}/instance/create`,
+    {
+      method: "POST",
+      headers: evolutionHeaders(),
+      body: JSON.stringify({
+        instanceName: name,
+        qrcode: true,
+        integration: "WHATSAPP-BAILEYS",
+      }),
+    },
+    15_000
+  )
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`Evolution createInstance failed: ${res.status} ${text}`)
@@ -58,9 +74,11 @@ export { instanceNameForOrg }
 export async function getQRCode(
   instanceName: string
 ): Promise<EvolutionQrResponse> {
-  const res = await fetch(`${base()}/instance/connect/${instanceName}`, {
-    headers: evolutionHeaders(),
-  })
+  const res = await fetchWithTimeout(
+    `${base()}/instance/connect/${instanceName}`,
+    { headers: evolutionHeaders() },
+    10_000
+  )
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`Evolution connect/QR failed: ${res.status} ${text}`)
@@ -74,9 +92,10 @@ export async function getQRCode(
 export async function getConnectionStatus(
   instanceName: string
 ): Promise<EvolutionConnectionStateResponse> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${base()}/instance/connectionState/${instanceName}`,
-    { headers: evolutionHeaders() }
+    { headers: evolutionHeaders() },
+    10_000
   )
   if (!res.ok) {
     const text = await res.text().catch(() => "")
@@ -90,10 +109,11 @@ export async function getConnectionStatus(
 export async function logoutInstance(
   instanceName: string
 ): Promise<unknown> {
-  const res = await fetch(`${base()}/instance/logout/${instanceName}`, {
-    method: "DELETE",
-    headers: evolutionHeaders(),
-  })
+  const res = await fetchWithTimeout(
+    `${base()}/instance/logout/${instanceName}`,
+    { method: "DELETE", headers: evolutionHeaders() },
+    15_000
+  )
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`Evolution logout failed: ${res.status} ${text}`)

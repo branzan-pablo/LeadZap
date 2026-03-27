@@ -2,67 +2,14 @@
 
 import { revalidatePath } from "next/cache"
 
+import { requireAdminContext, type ActionResult } from "@/lib/auth/require-context"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createClient } from "@/lib/supabase/server"
 import {
   addStageSchema,
   deleteStageSchema,
   reorderStagesSchema,
   updateStageNameSchema,
 } from "@/lib/validations/settings"
-
-// ── Shared types ──────────────────────────────────────
-
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; message: string }
-
-type AuthContext = {
-  supabase: Awaited<ReturnType<typeof createClient>>
-  userId: string
-  organizationId: string
-}
-
-async function requireAdminContext(): Promise<
-  ActionResult<{ ctx: AuthContext }>
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." }
-  }
-
-  const { data: profile, error } = await supabase
-    .from("users")
-    .select("organization_id, role")
-    .eq("id", user.id)
-    .single()
-
-  if (error || !profile?.organization_id) {
-    return {
-      ok: false,
-      message: "Organização não encontrada. Conclua o onboarding.",
-    }
-  }
-
-  if (profile.role !== "admin") {
-    return { ok: false, message: "Apenas administradores podem fazer isso." }
-  }
-
-  return {
-    ok: true,
-    data: {
-      ctx: {
-        supabase,
-        userId: user.id,
-        organizationId: profile.organization_id as string,
-      },
-    },
-  }
-}
 
 function revalidatePipeline() {
   revalidatePath("/settings/pipeline")
@@ -154,7 +101,7 @@ export async function addStage(
   }
 
   revalidatePipeline()
-  return { ok: true, data: { id: stage.id as string } }
+  return { ok: true, data: { id: stage.id } }
 }
 
 // ── reorderStages ─────────────────────────────────────

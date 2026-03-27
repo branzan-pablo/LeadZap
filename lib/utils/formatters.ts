@@ -32,6 +32,17 @@ export function formatRelativeTime(value: Date | string) {
   return formatDistanceToNow(date, { addSuffix: true, locale: ptBR })
 }
 
+/** Converts numeric-like values (number | string | null | undefined) to number | null. */
+export function parseNumeric(value: unknown): number | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string") {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
 /** Short relative labels for last interaction (pipeline cards). */
 export function formatInteractionAgo(value: Date | string | null | undefined) {
   if (value == null) return "—"

@@ -49,10 +49,10 @@ Configure no `.env.local`:
 
 ```env
 EVOLUTION_API_URL=http://localhost:8080
-EVOLUTION_API_KEY=429683C4C977415CAAFCCE10F7D57E11
+EVOLUTION_API_KEY=<sua-chave-api>
 ```
 
-A `EVOLUTION_API_KEY` do script de dev usa um valor fixo para facilitar. Em produção, gere uma chave segura e configure via variável de ambiente do container (`AUTHENTICATION_API_KEY`).
+A chave padrão do container Docker pode ser encontrada no `docker-compose.yml` (variável `AUTHENTICATION_API_KEY`). **Nunca exponha este container na internet pública** — ele deve ser acessível apenas localmente. Em produção, gere uma chave aleatória forte e configure via variáveis de ambiente do servidor.
 
 ### Fluxo de conexão
 

@@ -1,14 +1,5 @@
+import { parseNumeric } from "@/lib/utils/formatters"
 import type { LeadSource, LeadView } from "@/types/lead"
-
-function parseNumeric(value: unknown): number | null {
-  if (value === null || value === undefined) return null
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string") {
-    const n = Number(value)
-    return Number.isFinite(n) ? n : null
-  }
-  return null
-}
 
 export type LeadRowDb = {
   id: string
@@ -19,7 +10,9 @@ export type LeadRowDb = {
   phone: string
   email: string | null
   company: string | null
-  source: LeadSource
+  // DB type is `string`; narrowed to LeadSource in toLeadView
+  source: string
+  // Accepts `number | null` from DB and `unknown` from realtime payloads
   estimated_value: unknown
   notes: string | null
   position: number
@@ -48,7 +41,7 @@ export function toLeadView(row: LeadRowDb): LeadView {
     phone: row.phone,
     email: row.email,
     company: row.company,
-    source: row.source,
+    source: row.source as LeadSource,
     estimated_value: parseNumeric(row.estimated_value),
     notes: row.notes,
     position: row.position,

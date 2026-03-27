@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { sendPushNotification } from "@/lib/push/send"
+import { logger } from "@/lib/utils/logger"
 
 const bodySchema = z.object({
   userId: z.string().uuid(),
@@ -28,7 +29,7 @@ const UNAUTHORIZED = NextResponse.json({ error: "Unauthorized" }, { status: 401 
 export async function POST(request: Request) {
   const secret = process.env.PUSH_SEND_SECRET
   if (!secret) {
-    console.error("[api/push/send] PUSH_SEND_SECRET not configured — rejecting request")
+    logger.error("[api/push/send] PUSH_SEND_SECRET not configured — rejecting request")
     return UNAUTHORIZED
   }
 
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       tag: parsed.data.tag,
     })
   } catch (e: unknown) {
-    console.error("[api/push/send] notification failed:", e)
+    logger.error("[api/push/send] notification failed", { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: "Send failed" }, { status: 500 })
   }
 

@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { requireOrgContext, type ActionResult } from "@/lib/auth/require-context"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createClient } from "@/lib/supabase/server"
+import { toUserFacingError } from "@/lib/utils/server-error"
 import {
   addLeadNoteSchema,
   addTagToLeadSchema,
@@ -32,9 +33,8 @@ type ActivityType =
   | "attachment_removed"
   | "message_received"
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; message: string }
+// Re-exported for backward compatibility with callers that reference this name.
+export type { ActionResult }
 
 async function insertActivity(params: {
   organization_id: string
@@ -52,53 +52,6 @@ async function insertActivity(params: {
     type: params.type,
     metadata: params.metadata ?? null,
   })
-}
-
-type AuthContext = {
-  supabase: Awaited<ReturnType<typeof createClient>>
-  userId: string
-  organizationId: string
-  role: "admin" | "user"
-  fullName: string
-}
-
-async function requireOrgContext(): Promise<
-  ActionResult<{ ctx: AuthContext }>
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." }
-  }
-
-  const { data: profile, error } = await supabase
-    .from("users")
-    .select("organization_id, role, full_name")
-    .eq("id", user.id)
-    .single()
-
-  if (error || !profile?.organization_id) {
-    return {
-      ok: false,
-      message: "Organização não encontrada. Conclua o onboarding.",
-    }
-  }
-
-  return {
-    ok: true,
-    data: {
-      ctx: {
-        supabase,
-        userId: user.id,
-        organizationId: profile.organization_id as string,
-        role: profile.role === "admin" ? "admin" : "user",
-        fullName: (profile.full_name as string) ?? "Usuário",
-      },
-    },
-  }
 }
 
 export async function createLead(
@@ -166,7 +119,7 @@ export async function createLead(
     .insert({
       organization_id: organizationId,
       assigned_to: userId,
-      pipeline_stage_id: firstStage.id as string,
+      pipeline_stage_id: firstStage.id,
       name: body.name.trim(),
       phone: body.phone,
       email,
@@ -182,13 +135,10 @@ export async function createLead(
     .single()
 
   if (insertError || !inserted) {
-    return {
-      ok: false,
-      message: insertError?.message ?? "Não foi possível criar o lead.",
-    }
+    return { ok: false, message: toUserFacingError(insertError, "Não foi possível criar o lead.") }
   }
 
-  const leadId = inserted.id as string
+  const leadId = inserted.id
 
   await insertActivity({
     organization_id: organizationId,
@@ -344,7 +294,7 @@ export async function moveLead(
     return { ok: false, message: "Lead não encontrado." }
   }
 
-  const fromStageId = lead.pipeline_stage_id as string
+  const fromStageId = lead.pipeline_stage_id
 
   const { data: stages, error: stagesError } = await supabase
     .from("pipeline_stages")
@@ -386,8 +336,8 @@ export async function moveLead(
     return { ok: false, message: "Não foi possível carregar o pipeline." }
   }
 
-  let orderedOld = oldStageLeads.map((r) => r.id as string)
-  let orderedNew = newStageLeads.map((r) => r.id as string)
+  let orderedOld = oldStageLeads.map((r) => r.id)
+  let orderedNew = newStageLeads.map((r) => r.id)
 
   if (fromStageId === newStageId) {
     if (!orderedOld.includes(leadId)) {
@@ -677,9 +627,9 @@ export async function createTag(
   return {
     ok: true,
     data: {
-      id: inserted.id as string,
-      name: inserted.name as string,
-      color: inserted.color as string,
+      id: inserted.id,
+      name: inserted.name,
+      color: inserted.color,
     },
   }
 }
@@ -746,7 +696,7 @@ export async function addLeadNote(
   revalidatePath("/pipeline")
   revalidatePath("/leads")
 
-  return { ok: true, data: { id: inserted.id as string } }
+  return { ok: true, data: { id: inserted.id } }
 }
 
 export async function listLeadNotes(
@@ -960,13 +910,13 @@ export async function uploadAttachment(
   return {
     ok: true,
     data: {
-      id: inserted.id as string,
-      file_name: inserted.file_name as string,
-      file_type: inserted.file_type as string,
-      file_size: inserted.file_size as number,
-      storage_path: inserted.storage_path as string,
-      uploaded_by: inserted.uploaded_by as string,
-      created_at: inserted.created_at as string,
+      id: inserted.id,
+      file_name: inserted.file_name,
+      file_type: inserted.file_type,
+      file_size: inserted.file_size,
+      storage_path: inserted.storage_path,
+      uploaded_by: inserted.uploaded_by,
+      created_at: inserted.created_at,
     },
   }
 }
@@ -1014,7 +964,7 @@ export async function deleteAttachment(
   const admin = createAdminClient()
 
   // Delete from storage
-  await admin.storage.from("attachments").remove([att.storage_path as string])
+  await admin.storage.from("attachments").remove([att.storage_path])
 
   // Delete DB record
   const { error: delErr } = await admin
@@ -1070,7 +1020,7 @@ export async function getAttachmentSignedUrl(
   const admin = createAdminClient()
   const { data: signed, error: signErr } = await admin.storage
     .from("attachments")
-    .createSignedUrl(att.storage_path as string, 60 * 5) // 5 min expiry
+    .createSignedUrl(att.storage_path, 60 * 5) // 5 min expiry
 
   if (signErr || !signed?.signedUrl) {
     return { ok: false, message: "Não foi possível gerar URL de download." }
@@ -1119,13 +1069,13 @@ export async function listAttachments(
   return {
     ok: true,
     data: rows.map((r) => ({
-      id: r.id as string,
-      file_name: r.file_name as string,
-      file_type: r.file_type as string,
-      file_size: r.file_size as number,
-      storage_path: r.storage_path as string,
-      uploaded_by: r.uploaded_by as string,
-      created_at: r.created_at as string,
+      id: r.id,
+      file_name: r.file_name,
+      file_type: r.file_type,
+      file_size: r.file_size,
+      storage_path: r.storage_path,
+      uploaded_by: r.uploaded_by,
+      created_at: r.created_at,
     })),
   }
 }

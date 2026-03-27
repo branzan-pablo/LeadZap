@@ -111,22 +111,22 @@ export async function getOrgPipelineData(): Promise<OrgPipelineData | null> {
   )
 
   const tags: TagView[] = rawTags.map((t) => ({
-    id: t.id as string,
-    name: t.name as string,
-    color: t.color as string,
+    id: t.id,
+    name: t.name,
+    color: t.color,
   }))
 
   const members: OrgMemberView[] = rawMembers.map((m) => ({
-    id: m.id as string,
-    full_name: m.full_name as string,
-    email: m.email as string,
+    id: m.id,
+    full_name: m.full_name,
+    email: m.email,
   }))
 
   return {
     organizationId,
     userId: user.id,
     isAdmin,
-    stages: stages as unknown as PipelineStageView[],
+    stages: stages as PipelineStageView[],
     leads,
     tags,
     members,

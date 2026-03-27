@@ -3,6 +3,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react"
 
 import { createClient } from "@/lib/supabase/client"
+import { parseNumeric } from "@/lib/utils/formatters"
 import type { LeadView } from "@/types/lead"
 
 type RealtimePayload = {
@@ -22,16 +23,6 @@ type RealtimePayload = {
   deleted_at?: string | null
   created_at?: string
   updated_at?: string
-}
-
-function parseNumeric(value: unknown): number | null {
-  if (value === null || value === undefined) return null
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string") {
-    const n = Number(value)
-    return Number.isFinite(n) ? n : null
-  }
-  return null
 }
 
 function rowToLeadView(
@@ -114,10 +105,10 @@ export function useRealtimeLeads(
               }
               const idx = prev.findIndex((l) => l.id === row.id)
               if (idx === -1) {
-                const mapped = rowToLeadView(row, undefined)
-                return mapped && mapped.organization_id
-                  ? [...prev, { ...mapped, tags: [] }]
-                  : prev
+                // Lead not in local state — skip silently.
+                // INSERT events handle initial population; adding here would create a
+                // tagless duplicate since the realtime UPDATE payload has no tag data.
+                return prev
               }
               const mapped = rowToLeadView(row, prev[idx])
               if (!mapped) return prev

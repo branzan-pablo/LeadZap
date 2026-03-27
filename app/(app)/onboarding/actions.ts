@@ -7,6 +7,7 @@ import {
   organizationNameSchema,
 } from "@/lib/validations/onboarding"
 import { slugify } from "@/lib/utils/slug"
+import { toUserFacingError } from "@/lib/utils/server-error"
 
 export type CreateOrganizationSuccess = {
   ok: true
@@ -77,8 +78,7 @@ export async function createOrganization(
     .single()
 
   if (profileError || !profile) {
-    console.error("[createOrganization] profile lookup failed:", { profileError, profile, userId: user.id })
-    return { ok: false, message: profileError?.message ?? "Não foi possível carregar seu perfil." }
+    return { ok: false, message: toUserFacingError({ profileError, userId: user.id }, "Não foi possível carregar seu perfil.") }
   }
 
   if (profile.organization_id) {
@@ -95,9 +95,9 @@ export async function createOrganization(
     return {
       ok: true,
       organization: {
-        id: org.id as string,
-        name: org.name as string,
-        slug: org.slug as string,
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
       },
     }
   }
@@ -126,34 +126,30 @@ export async function createOrganization(
     .single()
 
   if (insertError || !inserted) {
-    return {
-      ok: false,
-      message:
-        insertError?.message ?? "Não foi possível criar a organização.",
-    }
+    return { ok: false, message: toUserFacingError(insertError, "Não foi possível criar a organização.") }
   }
 
   const { error: updateError } = await admin
     .from("users")
     .update({
-      organization_id: inserted.id as string,
+      organization_id: inserted.id,
       role: "admin",
     })
     .eq("id", user.id)
 
   if (updateError) {
-    return {
-      ok: false,
-      message: updateError.message ?? "Não foi possível vincular sua conta.",
-    }
+    // Compensating delete — avoid orphaned organization row with no admin user
+    await admin.from("organizations").delete().eq("id", inserted.id)
+    console.error("[createOrganization] user update failed, org rolled back:", updateError)
+    return { ok: false, message: "Não foi possível vincular sua conta." }
   }
 
   return {
     ok: true,
     organization: {
-      id: inserted.id as string,
-      name: inserted.name as string,
-      slug: inserted.slug as string,
+      id: inserted.id,
+      name: inserted.name,
+      slug: inserted.slug,
     },
   }
 }

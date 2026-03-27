@@ -1,10 +1,40 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-export async function middleware(request: NextRequest) {
-  const { supabaseResponse, user, supabase } = await updateSession(request)
+// ---------------------------------------------------------------------------
+// Simple in-process sliding-window rate limiter (per IP, per instance).
+// Adequate for basic abuse prevention; use an external store (e.g. Upstash)
+// for distributed enforcement across Vercel instances.
+// ---------------------------------------------------------------------------
+const RATE_LIMIT_MAX = 10       // max requests
+const RATE_LIMIT_WINDOW_MS = 60_000  // per 60 seconds
 
+const rateLimitStore = new Map<string, number[]>()
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const cutoff = now - RATE_LIMIT_WINDOW_MS
+  const hits = (rateLimitStore.get(ip) ?? []).filter((t) => t > cutoff)
+  hits.push(now)
+  rateLimitStore.set(ip, hits)
+  return hits.length > RATE_LIMIT_MAX
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Rate-limit the push subscription endpoint (10 req / 60 s per IP)
+  if (pathname === '/api/push/subscribe') {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: 'Too many requests. Try again later.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      )
+    }
+  }
+
+  const { supabaseResponse, user, supabase } = await updateSession(request)
 
   // Webhooks and server-triggered push must not require a browser session
   if (pathname.startsWith('/api/webhooks')) {

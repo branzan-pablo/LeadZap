@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { requireOrgContext, type ActionResult } from "@/lib/auth/require-context"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createClient } from "@/lib/supabase/server"
+import { toUserFacingError } from "@/lib/utils/server-error"
 
-export type ReminderActionResult<T = void> =
-  | { ok: true; data: T }
-  | { ok: false; message: string }
+// Re-exported for backward compatibility with callers that reference this name.
+export type { ActionResult as ReminderActionResult }
 
 const createReminderSchema = z.object({
   leadId: z.string().uuid(),
@@ -46,33 +46,17 @@ function revalidateReminderPaths() {
 
 export async function createReminder(
   raw: unknown
-): Promise<ReminderActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string }>> {
   const parsed = createReminderSchema.safeParse(raw)
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? "Dados inválidos"
     return { ok: false, message: msg }
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const auth = await requireOrgContext()
+  if (!auth.ok) return auth
 
-  if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." }
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("organization_id")
-    .eq("id", user.id)
-    .single()
-
-  if (profileError || !profile?.organization_id) {
-    return { ok: false, message: "Organização não encontrada." }
-  }
-
-  const organizationId = profile.organization_id as string
+  const { supabase, userId, organizationId } = auth.data.ctx
   const due = new Date(parsed.data.dueAt)
   if (Number.isNaN(due.getTime())) {
     return { ok: false, message: "Data inválida." }
@@ -93,7 +77,7 @@ export async function createReminder(
     .from("reminders")
     .insert({
       organization_id: organizationId,
-      user_id: user.id,
+      user_id: userId,
       lead_id: parsed.data.leadId,
       title: parsed.data.title,
       due_at: due.toISOString(),
@@ -102,18 +86,15 @@ export async function createReminder(
     .single()
 
   if (error || !inserted) {
-    return {
-      ok: false,
-      message: error?.message ?? "Não foi possível criar o lembrete.",
-    }
+    return { ok: false, message: toUserFacingError(error, "Não foi possível criar o lembrete.") }
   }
 
-  const reminderId = inserted.id as string
+  const reminderId = inserted.id
 
   await insertReminderActivity({
     organization_id: organizationId,
     lead_id: parsed.data.leadId,
-    user_id: user.id,
+    user_id: userId,
     type: "reminder_created",
     metadata: {
       reminder_id: reminderId,
@@ -129,21 +110,17 @@ export async function createReminder(
 
 export async function completeReminder(
   raw: unknown
-): Promise<ReminderActionResult> {
+): Promise<ActionResult<void>> {
   const parsed = reminderIdSchema.safeParse(raw)
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? "Dados inválidos"
     return { ok: false, message: msg }
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const auth = await requireOrgContext()
+  if (!auth.ok) return auth
 
-  if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." }
-  }
+  const { supabase, userId } = auth.data.ctx
 
   const { data: row, error: fetchError } = await supabase
     .from("reminders")
@@ -155,7 +132,7 @@ export async function completeReminder(
     return { ok: false, message: "Lembrete não encontrado." }
   }
 
-  if (row.user_id !== user.id) {
+  if (row.user_id !== userId) {
     return { ok: false, message: "Você não pode concluir este lembrete." }
   }
 
@@ -170,20 +147,17 @@ export async function completeReminder(
     .eq("id", parsed.data.reminderId)
 
   if (updateError) {
-    return {
-      ok: false,
-      message: updateError.message ?? "Não foi possível concluir o lembrete.",
-    }
+    return { ok: false, message: toUserFacingError(updateError, "Não foi possível concluir o lembrete.") }
   }
 
   await insertReminderActivity({
-    organization_id: row.organization_id as string,
-    lead_id: row.lead_id as string,
-    user_id: user.id,
+    organization_id: row.organization_id,
+    lead_id: row.lead_id,
+    user_id: userId,
     type: "reminder_completed",
     metadata: {
       reminder_id: row.id,
-      title: row.title as string,
+      title: row.title,
     },
   })
 
@@ -194,33 +168,18 @@ export async function completeReminder(
 
 export async function deleteReminder(
   raw: unknown
-): Promise<ReminderActionResult> {
+): Promise<ActionResult<void>> {
   const parsed = reminderIdSchema.safeParse(raw)
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? "Dados inválidos"
     return { ok: false, message: msg }
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const auth = await requireOrgContext()
+  if (!auth.ok) return auth
 
-  if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." }
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single()
-
-  if (profileError || !profile) {
-    return { ok: false, message: "Perfil não encontrado." }
-  }
-
-  const isAdmin = profile.role === "admin"
+  const { supabase, userId, role } = auth.data.ctx
+  const isAdmin = role === "admin"
 
   const { data: row, error: fetchError } = await supabase
     .from("reminders")
@@ -232,7 +191,7 @@ export async function deleteReminder(
     return { ok: false, message: "Lembrete não encontrado." }
   }
 
-  if (row.user_id !== user.id && !isAdmin) {
+  if (row.user_id !== userId && !isAdmin) {
     return { ok: false, message: "Você não pode excluir este lembrete." }
   }
 
@@ -242,10 +201,7 @@ export async function deleteReminder(
     .eq("id", parsed.data.reminderId)
 
   if (deleteError) {
-    return {
-      ok: false,
-      message: deleteError.message ?? "Não foi possível excluir o lembrete.",
-    }
+    return { ok: false, message: toUserFacingError(deleteError, "Não foi possível excluir o lembrete.") }
   }
 
   revalidateReminderPaths()

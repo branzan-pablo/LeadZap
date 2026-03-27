@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { requireOrgContext, type ActionResult } from "@/lib/auth/require-context"
 import {
   createInstance,
   extractConnectedPhone,
@@ -13,57 +14,10 @@ import {
   mapConnectionResponseToDbStatus,
 } from "@/lib/evolution/client"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createClient } from "@/lib/supabase/server"
 import type { WhatsappInstanceDbStatus } from "@/types/evolution"
 
-export type WhatsappActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; message: string }
-
-type AuthContext = {
-  supabase: Awaited<ReturnType<typeof createClient>>
-  userId: string
-  organizationId: string
-  role: "admin" | "user"
-}
-
-async function requireOrgContext(): Promise<
-  WhatsappActionResult<{ ctx: AuthContext }>
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." }
-  }
-
-  const { data: profile, error } = await supabase
-    .from("users")
-    .select("organization_id, role")
-    .eq("id", user.id)
-    .single()
-
-  if (error || !profile?.organization_id) {
-    return {
-      ok: false,
-      message: "Organização não encontrada. Conclua o onboarding.",
-    }
-  }
-
-  return {
-    ok: true,
-    data: {
-      ctx: {
-        supabase,
-        userId: user.id,
-        organizationId: profile.organization_id as string,
-        role: profile.role === "admin" ? "admin" : "user",
-      },
-    },
-  }
-}
+// Re-exported for backward compatibility with callers that reference this name.
+export type { ActionResult as WhatsappActionResult }
 
 function assertEvolutionConfigured(): void {
   if (!process.env.EVOLUTION_API_URL?.trim() || !process.env.EVOLUTION_API_KEY?.trim()) {
@@ -77,7 +31,7 @@ function assertEvolutionConfigured(): void {
  * Garante linha em `whatsapp_instances`, cria instância na Evolution se necessário e retorna QR.
  */
 export async function prepareWhatsAppConnection(): Promise<
-  WhatsappActionResult<{ qrDataUrl: string }>
+  ActionResult<{ qrDataUrl: string }>
 > {
   const auth = await requireOrgContext()
   if (!auth.ok) return auth
@@ -167,7 +121,7 @@ export async function prepareWhatsAppConnection(): Promise<
  * Consulta Evolution, atualiza `whatsapp_instances` e devolve estado atual.
  */
 export async function syncWhatsAppInstanceState(): Promise<
-  WhatsappActionResult<{
+  ActionResult<{
     status: WhatsappInstanceDbStatus
     phone_number: string | null
   }>
@@ -254,7 +208,7 @@ export async function syncWhatsAppInstanceState(): Promise<
 }
 
 export async function disconnectWhatsAppInstance(): Promise<
-  WhatsappActionResult<null>
+  ActionResult<null>
 > {
   const auth = await requireOrgContext()
   if (!auth.ok) return auth
@@ -302,7 +256,7 @@ export async function disconnectWhatsAppInstance(): Promise<
 
 /** Qualquer membro da org: leitura do status (service role, sem expor API key). */
 export async function getWhatsAppHeaderStatus(): Promise<
-  WhatsappActionResult<{
+  ActionResult<{
     status: WhatsappInstanceDbStatus | null
     phone_number: string | null
   }>

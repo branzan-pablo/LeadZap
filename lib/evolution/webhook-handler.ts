@@ -4,6 +4,7 @@ import type { ParsedIncomingWhatsappMessage } from "@/types/evolution"
 
 import { normalizeEvolutionWebhookPayload } from "./normalize-webhook-payload"
 import { normalizeBrazilPhoneToE164 } from "@/lib/utils/phone"
+import { logger } from "@/lib/utils/logger"
 
 const ORG_INSTANCE_PREFIX = /^org_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
 
@@ -36,7 +37,7 @@ async function ensureLeadForIncomingMessage(params: {
     .is("deleted_at", null)
     .maybeSingle()
 
-  if (existing?.id) return existing.id as string
+  if (existing?.id) return existing.id
 
   const { data: firstStage, error: stageError } = await admin
     .from("pipeline_stages")
@@ -60,7 +61,7 @@ async function ensureLeadForIncomingMessage(params: {
     .insert({
       organization_id: organizationId,
       assigned_to: null,
-      pipeline_stage_id: firstStage.id as string,
+      pipeline_stage_id: firstStage.id,
       name,
       phone: phoneE164,
       email: null,
@@ -80,13 +81,13 @@ async function ensureLeadForIncomingMessage(params: {
 
   await admin.from("activities").insert({
     organization_id: organizationId,
-    lead_id: inserted.id as string,
+    lead_id: inserted.id,
     user_id: null,
     type: "lead_created",
     metadata: { source: "whatsapp", phone: phoneE164 },
   })
 
-  return inserted.id as string
+  return inserted.id
 }
 
 async function processIncomingMessage(
@@ -95,16 +96,13 @@ async function processIncomingMessage(
 ): Promise<void> {
   const organizationId = parseOrgIdFromInstanceName(msg.instanceName)
   if (!organizationId) {
-    console.warn(
-      "[evolution-webhook] instanceName inválido:",
-      msg.instanceName
-    )
+    logger.warn("[evolution-webhook] instanceName inválido", { instanceName: msg.instanceName })
     return
   }
 
   const phoneE164 = phoneFromRemoteJid(msg.remoteJid)
   if (!phoneE164) {
-    console.warn("[evolution-webhook] remoteJid sem telefone válido:", msg.remoteJid)
+    logger.warn("[evolution-webhook] remoteJid sem telefone válido", { remoteJid: msg.remoteJid })
     return
   }
 
@@ -144,7 +142,7 @@ async function processIncomingMessage(
     .eq("organization_id", organizationId)
 
   if (leadUpdError) {
-    console.error("[evolution-webhook] update lead:", leadUpdError.message)
+    logger.error("[evolution-webhook] update lead failed", { organizationId, leadId, error: leadUpdError.message })
   }
 
   await admin.from("activities").insert({
@@ -167,7 +165,7 @@ export async function processWebhook(
   payload: EvolutionWebhookPayload
 ): Promise<void> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error("[evolution-webhook] SUPABASE_SERVICE_ROLE_KEY ausente")
+    logger.error("[evolution-webhook] SUPABASE_SERVICE_ROLE_KEY ausente")
     return
   }
 
@@ -179,7 +177,7 @@ export async function processWebhook(
     try {
       await processIncomingMessage(admin, m)
     } catch (e) {
-      console.error("[evolution-webhook] processIncomingMessage:", e)
+      logger.error("[evolution-webhook] processIncomingMessage failed", { error: String(e) })
     }
   }
 }

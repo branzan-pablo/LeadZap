@@ -2,71 +2,14 @@
 
 import { revalidatePath } from "next/cache"
 
+import { requireAdminContext, type ActionResult } from "@/lib/auth/require-context"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createClient } from "@/lib/supabase/server"
 import {
   inviteMemberSchema,
   removeMemberSchema,
   revokeInviteSchema,
   updateOrgNameSchema,
 } from "@/lib/validations/settings"
-
-// ── Shared types ──────────────────────────────────────
-
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; message: string }
-
-type AuthContext = {
-  supabase: Awaited<ReturnType<typeof createClient>>
-  userId: string
-  organizationId: string
-  role: "admin" | "user"
-  fullName: string
-}
-
-async function requireAdminContext(): Promise<
-  ActionResult<{ ctx: AuthContext }>
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." }
-  }
-
-  const { data: profile, error } = await supabase
-    .from("users")
-    .select("organization_id, role, full_name")
-    .eq("id", user.id)
-    .single()
-
-  if (error || !profile?.organization_id) {
-    return {
-      ok: false,
-      message: "Organização não encontrada. Conclua o onboarding.",
-    }
-  }
-
-  if (profile.role !== "admin") {
-    return { ok: false, message: "Apenas administradores podem fazer isso." }
-  }
-
-  return {
-    ok: true,
-    data: {
-      ctx: {
-        supabase,
-        userId: user.id,
-        organizationId: profile.organization_id as string,
-        role: "admin",
-        fullName: (profile.full_name as string) ?? "Usuário",
-      },
-    },
-  }
-}
 
 // ── inviteMember ──────────────────────────────────────
 
@@ -132,7 +75,7 @@ export async function inviteMember(
     .is("accepted_at", null)
 
   const totalSlots = (memberCount ?? 0) + (pendingCount ?? 0)
-  if (totalSlots >= (org.max_users as number)) {
+  if (totalSlots >= org.max_users) {
     return {
       ok: false,
       message: `Limite de ${org.max_users} usuários atingido. Faça upgrade do plano para convidar mais membros.`,
@@ -160,8 +103,8 @@ export async function inviteMember(
   return {
     ok: true,
     data: {
-      inviteId: invite.id as string,
-      token: invite.token as string,
+      inviteId: invite.id,
+      token: invite.token,
     },
   }
 }
