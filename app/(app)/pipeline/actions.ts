@@ -6,6 +6,7 @@ import { z } from "zod"
 import { requireOrgContext, type ActionResult } from "@/lib/auth/require-context"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { toUserFacingError } from "@/lib/utils/server-error"
+import type { AttachmentView } from "@/types/lead"
 import {
   addLeadNoteSchema,
   addTagToLeadSchema,
@@ -33,8 +34,6 @@ type ActivityType =
   | "attachment_removed"
   | "message_received"
 
-// Re-exported for backward compatibility with callers that reference this name.
-export type { ActionResult }
 
 async function insertActivity(params: {
   organization_id: string
@@ -436,6 +435,7 @@ export async function deleteLead(
   }
 
   const { supabase, userId, organizationId } = auth.data.ctx
+  const admin = createAdminClient()
   const leadId = parsed.data.leadId
 
   const { data: existing, error: loadError } = await supabase
@@ -449,10 +449,11 @@ export async function deleteLead(
     return { ok: false, message: "Lead não encontrado." }
   }
 
-  const { error: delError } = await supabase
+  const { error: delError } = await admin
     .from("leads")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", leadId)
+    .eq("organization_id", organizationId)
 
   if (delError) {
     return {
@@ -775,15 +776,6 @@ const ALLOWED_MIME_TYPES = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
 const MAX_ATTACHMENTS_PER_LEAD = 5
 
-export type AttachmentView = {
-  id: string
-  file_name: string
-  file_type: string
-  file_size: number
-  storage_path: string
-  uploaded_by: string
-  created_at: string
-}
 
 export async function uploadAttachment(
   formData: FormData

@@ -40,21 +40,37 @@ function instanceNameForOrg(orgId: string): string {
 
 /**
  * Cria instância na Evolution API para a organização (`org_{uuid}`).
+ * Se EVOLUTION_WEBHOOK_CALLBACK_URL e EVOLUTION_WEBHOOK_SECRET estiverem definidos,
+ * configura o webhook automaticamente para receber mensagens.
  */
 export async function createInstance(
   orgId: string
 ): Promise<EvolutionCreateInstanceResponse> {
   const name = instanceNameForOrg(orgId)
+
+  const body: Record<string, unknown> = {
+    instanceName: name,
+    qrcode: true,
+    integration: "WHATSAPP-BAILEYS",
+  }
+
+  const callbackUrl = process.env.EVOLUTION_WEBHOOK_CALLBACK_URL?.replace(/\/$/, "")
+  const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET
+  if (callbackUrl && webhookSecret) {
+    body.webhook = {
+      url: `${callbackUrl}/api/webhooks/evolution`,
+      events: ["MESSAGES_UPSERT"],
+      headers: { "x-webhook-secret": webhookSecret },
+      base64: false,
+    }
+  }
+
   const res = await fetchWithTimeout(
     `${base()}/instance/create`,
     {
       method: "POST",
       headers: evolutionHeaders(),
-      body: JSON.stringify({
-        instanceName: name,
-        qrcode: true,
-        integration: "WHATSAPP-BAILEYS",
-      }),
+      body: JSON.stringify(body),
     },
     15_000
   )
@@ -117,6 +133,21 @@ export async function logoutInstance(
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`Evolution logout failed: ${res.status} ${text}`)
+  }
+  return res.json().catch(() => ({}))
+}
+
+export async function deleteInstance(
+  instanceName: string
+): Promise<unknown> {
+  const res = await fetchWithTimeout(
+    `${base()}/instance/delete/${instanceName}`,
+    { method: "DELETE", headers: evolutionHeaders() },
+    15_000
+  )
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(`Evolution deleteInstance failed: ${res.status} ${text}`)
   }
   return res.json().catch(() => ({}))
 }

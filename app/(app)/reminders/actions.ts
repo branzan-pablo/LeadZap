@@ -7,8 +7,6 @@ import { requireOrgContext, type ActionResult } from "@/lib/auth/require-context
 import { createAdminClient } from "@/lib/supabase/admin"
 import { toUserFacingError } from "@/lib/utils/server-error"
 
-// Re-exported for backward compatibility with callers that reference this name.
-export type { ActionResult as ReminderActionResult }
 
 const createReminderSchema = z.object({
   leadId: z.string().uuid(),

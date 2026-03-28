@@ -44,3 +44,13 @@ export type LeadNoteView = {
   created_at: string
   author_name: string | null
 }
+
+export type AttachmentView = {
+  id: string
+  file_name: string
+  file_type: string
+  file_size: number
+  storage_path: string
+  uploaded_by: string
+  created_at: string
+}

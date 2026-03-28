@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:full": "pnpm evolution:start && pnpm dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "evolution:start": "docker compose up -d",
     "evolution:stop": "docker compose down",
-    "evolution:logs": "docker compose logs -f evolution-api"
+    "evolution:logs": "docker compose logs -f evolution-api",
+    "stop:all": "docker compose down && supabase stop"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

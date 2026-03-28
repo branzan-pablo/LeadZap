@@ -8,8 +8,8 @@ import {
   deleteAttachment,
   getAttachmentSignedUrl,
   listAttachments,
-  type AttachmentView,
 } from "@/app/(app)/pipeline/actions"
+import type { AttachmentView } from "@/types/lead"
 import { Button } from "@/components/ui/button"
 
 const ALLOWED_MIME_TYPES = [

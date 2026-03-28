@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { requireOrgContext, type ActionResult } from "@/lib/auth/require-context"
 import {
   createInstance,
+  deleteInstance,
   extractConnectedPhone,
   extractQrDataUrl,
   getConnectionStatus,
@@ -16,8 +17,6 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { WhatsappInstanceDbStatus } from "@/types/evolution"
 
-// Re-exported for backward compatibility with callers that reference this name.
-export type { ActionResult as WhatsappActionResult }
 
 function assertEvolutionConfigured(): void {
   if (!process.env.EVOLUTION_API_URL?.trim() || !process.env.EVOLUTION_API_KEY?.trim()) {
@@ -98,9 +97,25 @@ export async function prepareWhatsAppConnection(): Promise<
     }
   }
 
-  const qrDataUrl = await extractQrDataUrl(
+  let qrDataUrl = await extractQrDataUrl(
     qrRaw as Parameters<typeof extractQrDataUrl>[0]
   )
+
+  // Evolution returned 200 but without QR data (e.g. stale instance after restart).
+  // Delete and recreate the instance to get a fresh QR.
+  if (!qrDataUrl) {
+    try {
+      await deleteInstance(instanceName)
+    } catch { /* ignore – instance may not exist on Evolution side */ }
+    try {
+      await createInstance(organizationId)
+      const qrRaw2 = await getQRCode(instanceName)
+      qrDataUrl = await extractQrDataUrl(
+        qrRaw2 as Parameters<typeof extractQrDataUrl>[0]
+      )
+    } catch { /* fall through to error below */ }
+  }
+
   if (!qrDataUrl) {
     return {
       ok: false,

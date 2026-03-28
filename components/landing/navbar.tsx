@@ -11,6 +11,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 const navLinks = [
   { label: 'Features', href: '#features' },
@@ -20,6 +21,7 @@ const navLinks = [
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(false)
 
   useEffect(() => {
     function onScroll() {
@@ -28,6 +30,13 @@ export function Navbar() {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data }) => {
+      setLoggedIn(!!data.session)
+    })
   }, [])
 
   return (
@@ -61,16 +70,28 @@ export function Navbar() {
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm" render={<Link href="/login" />}>
-            Entrar
-          </Button>
-          <Button
-            size="sm"
-            className="bg-green-500 text-white hover:bg-green-600"
-            render={<Link href="/signup" />}
-          >
-            Começar grátis
-          </Button>
+          {loggedIn ? (
+            <Button
+              size="sm"
+              className="bg-green-500 text-white hover:bg-green-600"
+              render={<Link href="/pipeline" />}
+            >
+              Ir para o app
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" render={<Link href="/login" />}>
+                Entrar
+              </Button>
+              <Button
+                size="sm"
+                className="bg-green-500 text-white hover:bg-green-600"
+                render={<Link href="/signup" />}
+              >
+                Começar grátis
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile: CTA + Hamburger */}
@@ -78,9 +99,9 @@ export function Navbar() {
           <Button
             size="sm"
             className="bg-green-500 text-white hover:bg-green-600"
-            render={<Link href="/signup" />}
+            render={<Link href={loggedIn ? '/pipeline' : '/signup'} />}
           >
-            Começar grátis
+            {loggedIn ? 'Ir para o app' : 'Começar grátis'}
           </Button>
           <Button
             variant="ghost"
@@ -106,18 +127,30 @@ export function Navbar() {
               </SheetClose>
             ))}
             <hr className="border-zinc-200" />
-            <SheetClose render={<Link href="/login" />}>
-              <span className="text-base font-medium text-zinc-600">
-                Entrar
-              </span>
-            </SheetClose>
-            <Button
-              className="bg-green-500 text-white hover:bg-green-600"
-              render={<Link href="/signup" />}
-              onClick={() => setMobileOpen(false)}
-            >
-              Começar grátis
-            </Button>
+            {loggedIn ? (
+              <Button
+                className="bg-green-500 text-white hover:bg-green-600"
+                render={<Link href="/pipeline" />}
+                onClick={() => setMobileOpen(false)}
+              >
+                Ir para o app
+              </Button>
+            ) : (
+              <>
+                <SheetClose render={<Link href="/login" />}>
+                  <span className="text-base font-medium text-zinc-600">
+                    Entrar
+                  </span>
+                </SheetClose>
+                <Button
+                  className="bg-green-500 text-white hover:bg-green-600"
+                  render={<Link href="/signup" />}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Começar grátis
+                </Button>
+              </>
+            )}
           </div>
         </SheetContent>
       </Sheet>
